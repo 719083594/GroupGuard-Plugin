@@ -1,0 +1,9 @@
+{
+  "masters": [], "managementGroups": [], "notifyUsers": [],
+  "inviteMode": "off", "allowInviterConfirm": false, "allowAdminInvite": false,
+  "notifyInviter": false, "requestExpireMinutes": 5, "maxPendingRequests": 20,
+  "blackGroups": [], "whiteGroups": [],
+  "autoQuitEnabled": false, "minGroupMember": 10, "autoQuitTime": "00:00",
+  "autoQuitMessage": "本群成员 {memberCount} 人，未达到 {minMember} 人，机器人将退出。",
+  "dailyApi": "", "timezone": "Asia/Shanghai", "groups": []
+}

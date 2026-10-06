@@ -1,0 +1,430 @@
+{
+  "schemaVersion": 1,
+  "title": "GroupGuard-Plugin 群卫",
+  "description": "独立通用群管理：权限、审核、撤回、统计、通知与定时任务，无游戏依赖。",
+  "version": "1.0.0",
+  "commands": [
+    "#群管帮助",
+    "#群管版本",
+    "#群管发言日榜",
+    "#群管昨日榜",
+    "#群管发言月榜",
+    "#群管日报",
+    "#群管赞我",
+    "#群管状态",
+    "#群管设置 字段 值",
+    "#群管黑名单 添加/删除 QQ",
+    "#群管白名单 添加/删除 QQ",
+    "#群管开启",
+    "#群管关闭",
+    "#群管禁言 @成员 10分钟",
+    "#群管解禁 @成员",
+    "#群管踢 @成员",
+    "#群管全体禁言",
+    "#群管全体解禁",
+    "#群管撤回（引用）",
+    "#群管撤回 @成员 5",
+    "#群管设管理 @成员",
+    "#群管撤管理 @成员",
+    "#群管头衔 @成员 头衔",
+    "#群管待审核",
+    "#群管同意 请求编号",
+    "#群管拒绝 请求编号",
+    "#确认加群",
+    "#拒绝加群",
+    "#群管全局 字段 值",
+    "#群管群黑名单 添加/删除 群号",
+    "#群管群白名单 添加/删除 群号",
+    "#群管更新",
+    "#群管更新日志",
+    "#群管日志"
+  ],
+  "commandTable": [
+    {
+      "title": "群卫帮助与版本",
+      "command": "#群管帮助 / #群管版本",
+      "description": "无游戏依赖的独立群管理；#群卫为别名。",
+      "permission": "all",
+      "category": "群管理"
+    },
+    {
+      "title": "群卫发言排行",
+      "command": "#群管发言日榜 / #群管昨日榜 / #群管发言月榜",
+      "description": "按本群、本机器人与配置时区统计发言和图片。",
+      "permission": "all",
+      "category": "群管理"
+    },
+    {
+      "title": "群卫群服务",
+      "command": "#群管日报 / #群管赞我",
+      "description": "日报需设置API；点赞需在本群开启。",
+      "permission": "all",
+      "category": "群管理"
+    },
+    {
+      "title": "群卫设置与名单",
+      "command": "#群管状态 / #群管设置 字段 值 / #群管黑名单 添加/删除 QQ / #群管白名单 添加/删除 QQ",
+      "description": "群管理权限；开启/关闭需要群主或主人。",
+      "permission": "admin",
+      "category": "群管理"
+    },
+    {
+      "title": "启用群卫",
+      "command": "#群管开启 / #群管关闭",
+      "description": "仅群主或主人；只更改本群。",
+      "permission": "owner",
+      "category": "群管理"
+    },
+    {
+      "title": "群卫禁言与踢人",
+      "command": "#群管禁言 @成员 10分钟 / #群管解禁 @成员 / #群管踢 @成员 / #群管全体禁言 / #群管全体解禁",
+      "description": "操作人和机器人均需管理权限，保护群主和管理员。",
+      "permission": "admin",
+      "category": "群管理"
+    },
+    {
+      "title": "群卫撤回",
+      "command": "#群管撤回（引用） / #群管撤回 @成员 5",
+      "description": "只撤回本群；批量受条数和时间限制，准确显示失败数。",
+      "permission": "admin",
+      "category": "群管理"
+    },
+    {
+      "title": "群卫管理任免与头衔",
+      "command": "#群管设管理 @成员 / #群管撤管理 @成员 / #群管头衔 @成员 头衔",
+      "description": "操作人需群主或主人，机器人必须为群主。",
+      "permission": "owner",
+      "category": "群管理"
+    },
+    {
+      "title": "群卫审核",
+      "command": "#群管待审核 / #群管同意 请求编号 / #群管拒绝 请求编号 / #确认加群 / #拒绝加群",
+      "description": "可引用群卫审核通知；请求绑定账号和通知群，过期不可操作。",
+      "permission": "admin",
+      "category": "群管理"
+    },
+    {
+      "title": "群卫全局设置与维护",
+      "command": "#群管全局 字段 值 / #群管群黑名单 添加/删除 群号 / #群管群白名单 添加/删除 群号 / #群管更新 / #群管更新日志 / #群管日志",
+      "description": "仅主人私聊。全局设置、源码更新和审计；不覆盖本地源码改动。",
+      "permission": "master",
+      "category": "群管理"
+    }
+  ],
+  "configs": [
+    {
+      "id": "groupguard",
+      "title": "群卫设置",
+      "file": "config/local.json",
+      "defaults": {
+        "masters": [],
+        "managementGroups": [],
+        "notifyUsers": [],
+        "inviteMode": "off",
+        "allowInviterConfirm": false,
+        "allowAdminInvite": false,
+        "notifyInviter": false,
+        "requestExpireMinutes": 5,
+        "maxPendingRequests": 20,
+        "blackGroups": [],
+        "whiteGroups": [],
+        "autoQuitEnabled": false,
+        "minGroupMember": 10,
+        "autoQuitTime": "00:00",
+        "autoQuitMessage": "本群成员 {memberCount} 人，未达到 {minMember} 人，机器人将退出。",
+        "dailyApi": "",
+        "timezone": "Asia/Shanghai",
+        "groups": []
+      },
+      "reload": "hot",
+      "fields": [
+        {
+          "path": "masters",
+          "label": "主人QQ列表（TRSS同时继承框架主人）",
+          "type": "array",
+          "description": "JSON数组，例如 [\"123456789\"]"
+        },
+        {
+          "path": "managementGroups",
+          "label": "审核通知管理群",
+          "type": "array",
+          "description": "JSON数组，例如 [\"123456789\"]"
+        },
+        {
+          "path": "notifyUsers",
+          "label": "通知与审核管理用户",
+          "type": "array",
+          "description": "JSON数组，例如 [\"123456789\"]"
+        },
+        {
+          "path": "inviteMode",
+          "label": "机器人邀请审核模式",
+          "type": "string",
+          "enum": [
+            "off",
+            "manual",
+            "accept",
+            "reject"
+          ]
+        },
+        {
+          "path": "allowInviterConfirm",
+          "label": "允许邀请者自审",
+          "type": "boolean"
+        },
+        {
+          "path": "allowAdminInvite",
+          "label": "允许管理员邀请免审",
+          "type": "boolean"
+        },
+        {
+          "path": "notifyInviter",
+          "label": "私聊通知邀请人",
+          "type": "boolean"
+        },
+        {
+          "path": "requestExpireMinutes",
+          "label": "请求过期分钟数",
+          "type": "integer",
+          "min": 1,
+          "max": 60
+        },
+        {
+          "path": "maxPendingRequests",
+          "label": "最大待审核请求",
+          "type": "integer",
+          "min": 1,
+          "max": 100
+        },
+        {
+          "path": "blackGroups",
+          "label": "群黑名单",
+          "type": "array",
+          "description": "JSON数组，例如 [\"123456789\"]"
+        },
+        {
+          "path": "whiteGroups",
+          "label": "群白名单",
+          "type": "array",
+          "description": "JSON数组，例如 [\"123456789\"]"
+        },
+        {
+          "path": "autoQuitEnabled",
+          "label": "自动退群",
+          "type": "boolean",
+          "description": "开启后仅检查已启用群；管理群、白名单、主人所在群、机器人群主的群豁免。"
+        },
+        {
+          "path": "minGroupMember",
+          "label": "最低群人数",
+          "type": "integer",
+          "min": 1,
+          "max": 10000
+        },
+        {
+          "path": "autoQuitTime",
+          "label": "退群巡检时间",
+          "type": "string"
+        },
+        {
+          "path": "autoQuitMessage",
+          "label": "退群通知模板",
+          "type": "string"
+        },
+        {
+          "path": "dailyApi",
+          "label": "日报API网址",
+          "type": "string"
+        },
+        {
+          "path": "timezone",
+          "label": "定时任务与统计时区",
+          "type": "string"
+        },
+        {
+          "path": "groups",
+          "label": "逐群设置",
+          "type": "array",
+          "itemDefaults": {
+            "botId": "*",
+            "groupId": "",
+            "enabled": false,
+            "statistics": true,
+            "recall": true,
+            "likes": false,
+            "rankLimit": 10,
+            "recallLimit": 20,
+            "recallWindowMinutes": 10,
+            "welcomeEnabled": false,
+            "leaveEnabled": false,
+            "welcomeMessage": "欢迎 {userId} 加入本群！",
+            "leaveMessage": "{userId} 离开了本群。",
+            "dailyEnabled": false,
+            "dailyTime": "08:00",
+            "scheduledMute": false,
+            "muteTime": "00:00",
+            "unmuteTime": "08:00",
+            "joinMode": "off",
+            "question": "",
+            "answers": [],
+            "exactMatch": false,
+            "minLevel": 0,
+            "blackUsers": [],
+            "whiteUsers": [],
+            "autoBlacklistOnLeave": false
+          },
+          "description": "每项设置一个群，支持多机器人；默认不启用。"
+        },
+        {
+          "path": "groups.*.botId",
+          "label": "机器人QQ（*表示所有）",
+          "type": "string"
+        },
+        {
+          "path": "groups.*.groupId",
+          "label": "群号",
+          "type": "string"
+        },
+        {
+          "path": "groups.*.enabled",
+          "label": "启用本群",
+          "type": "boolean"
+        },
+        {
+          "path": "groups.*.statistics",
+          "label": "发言统计",
+          "type": "boolean"
+        },
+        {
+          "path": "groups.*.recall",
+          "label": "单条与批量撤回",
+          "type": "boolean"
+        },
+        {
+          "path": "groups.*.likes",
+          "label": "QQ点赞",
+          "type": "boolean"
+        },
+        {
+          "path": "groups.*.rankLimit",
+          "label": "排行榜人数",
+          "type": "integer",
+          "min": 1,
+          "max": 50
+        },
+        {
+          "path": "groups.*.recallLimit",
+          "label": "最大撤回条数",
+          "type": "integer",
+          "min": 1,
+          "max": 50
+        },
+        {
+          "path": "groups.*.recallWindowMinutes",
+          "label": "撤回记录窗口分钟数",
+          "type": "integer",
+          "min": 1,
+          "max": 120
+        },
+        {
+          "path": "groups.*.welcomeEnabled",
+          "label": "入群欢迎",
+          "type": "boolean"
+        },
+        {
+          "path": "groups.*.leaveEnabled",
+          "label": "退群通知",
+          "type": "boolean"
+        },
+        {
+          "path": "groups.*.welcomeMessage",
+          "label": "欢迎模板",
+          "type": "string"
+        },
+        {
+          "path": "groups.*.leaveMessage",
+          "label": "退群模板",
+          "type": "string"
+        },
+        {
+          "path": "groups.*.dailyEnabled",
+          "label": "定时日报",
+          "type": "boolean"
+        },
+        {
+          "path": "groups.*.dailyTime",
+          "label": "日报时间",
+          "type": "string"
+        },
+        {
+          "path": "groups.*.scheduledMute",
+          "label": "定时全体禁言",
+          "type": "boolean"
+        },
+        {
+          "path": "groups.*.muteTime",
+          "label": "全体禁言时间",
+          "type": "string"
+        },
+        {
+          "path": "groups.*.unmuteTime",
+          "label": "全体解禁时间",
+          "type": "string"
+        },
+        {
+          "path": "groups.*.joinMode",
+          "label": "成员加群审核模式",
+          "type": "string",
+          "enum": [
+            "off",
+            "manual",
+            "answer",
+            "accept",
+            "reject"
+          ]
+        },
+        {
+          "path": "groups.*.question",
+          "label": "入群问题提示",
+          "type": "string"
+        },
+        {
+          "path": "groups.*.answers",
+          "label": "正确答案列表",
+          "type": "array",
+          "description": "JSON数组，例如 [\"123456789\"]"
+        },
+        {
+          "path": "groups.*.exactMatch",
+          "label": "答案精确匹配",
+          "type": "boolean"
+        },
+        {
+          "path": "groups.*.minLevel",
+          "label": "最低QQ等级（0关闭）",
+          "type": "integer",
+          "min": 0,
+          "max": 200,
+          "description": "NapCat需要返回真实QQ等级；未知等级转人工审核。"
+        },
+        {
+          "path": "groups.*.blackUsers",
+          "label": "成员黑名单",
+          "type": "array",
+          "description": "JSON数组，例如 [\"123456789\"]"
+        },
+        {
+          "path": "groups.*.whiteUsers",
+          "label": "成员白名单",
+          "type": "array",
+          "description": "JSON数组，例如 [\"123456789\"]"
+        },
+        {
+          "path": "groups.*.autoBlacklistOnLeave",
+          "label": "离群自动拉黑",
+          "type": "boolean"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+.reference/
+config/local.json
+config/standalone.json
+data/
+dist/
+node_modules/
+*.tmp
+.verification/
