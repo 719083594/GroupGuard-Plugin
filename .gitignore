@@ -6,3 +6,15 @@ dist/
 node_modules/
 *.tmp
 .verification/
+.env*
+*.log
+*.db
+*.sqlite*
+*.key
+*.pem
+*.pfx
+*.p12
+*.bak
+*.backup
+__pycache__/
+*.pyc
