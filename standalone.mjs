@@ -37,5 +37,5 @@ const server=http.createServer(async(req,res)=>{
     await engine.handle(event,a)
   }catch(error){console.error(error.message);if(!res.headersSent){res.writeHead(400);res.end('{}')}}
 })
-server.listen(config.port||15083,config.host||'127.0.0.1',()=>console.log('群卫独立 HTTP 服务已启动'))
+server.listen(config.port||15083,config.host||'127.0.0.1',()=>console.log('群管独立 HTTP 服务已启动'))
 for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{engine.close();server.close(()=>process.exit(0))})

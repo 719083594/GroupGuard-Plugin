@@ -26,7 +26,7 @@ test('独立服务实测：HMAC、白名单账号、伪造主人拒绝、HTTP AP
   const event={self_id:100000001,user_id:123456789,group_id:200000001,post_type:'message',message:[{type:'text',data:{text:'#群管帮助'}}]}
   const post=async(e,valid=true)=>{const body=JSON.stringify(e);return fetch(url+'/onebot',{method:'POST',headers:{'X-Signature':valid?'sha1='+createHmac('sha1','test-secret').update(body).digest('hex'):'invalid'},body})}
   assert.equal((await post(event,false)).status,401);assert.equal((await post({...event,self_id:99999999})).status,403);assert.equal(calls.length,0)
-  assert.equal((await post(event)).status,200);await wait(()=>calls.length>0);assert.equal(calls[0].action,'send_group_msg');assert.match(calls[0].params.message[0].data.text,/群卫/)
+  assert.equal((await post(event)).status,200);await wait(()=>calls.length>0);assert.equal(calls[0].action,'send_group_msg');assert.match(calls[0].params.message[0].data.text,/群管/)
   await new Promise(r=>setTimeout(r,1100))
   assert.equal((await post({...event,group_id:undefined,isMaster:true,message:[{type:'text',data:{text:'#群管全局 inviteMode accept'}}]})).status,200)
   await wait(()=>calls.length>1);assert.match(calls.at(-1).params.message[0].data.text,/主人权限/);assert.equal(JSON.parse(fs.readFileSync(path.join(root,'config/local.json'))).inviteMode,'off')
@@ -41,7 +41,7 @@ test('分发规则覆盖帮助、群操作、兼容审核，OrangeJuice 文档�
   const entry=await import(new URL('file:///'+path.join(temporary,'GroupGuard-Plugin/index.js').replaceAll('\\','/')))
   t.after(()=>{entry.engine.close();delete globalThis.plugin;fs.rmSync(temporary,{recursive:true,force:true})})
   const p=new entry.GroupGuardCommands()
-  for(const cmd of ['#群管帮助','#群管设置 likes 开','#群管禁言 123456789 10分钟','#群管全局 inviteMode manual','#确认加群'])assert.equal(p.rule.some(r=>r.reg.test(cmd)),true,cmd)
+  for(const cmd of ['禁言','禁言 10分钟','#禁言 123456789 10分钟','解禁','#群管帮助','#群管设置 likes 开','#群管禁言 123456789 10分钟','#群管全局 inviteMode manual','#确认加群'])assert.equal(p.rule.some(r=>r.reg.test(cmd)),true,cmd)
   if(!fs.existsSync(path.join(source,'../OrangeJuice-Plugin/integrations/yunzai/command-table.mjs'))){t.diagnostic('独立仓库未附带 OrangeJuice，跳过外部指令表集成断言');return}
   const {buildCommandTable}=await import('../../OrangeJuice-Plugin/integrations/yunzai/command-table.mjs')
   const loader={priority:[{key:'GroupGuard-Plugin/index.js',plugin:p}]}

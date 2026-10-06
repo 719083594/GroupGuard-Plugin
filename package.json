@@ -1,6 +1,6 @@
 {
-  "name": "groupguard-plugin", "version": "1.0.0", "type": "module",
-  "description": "群卫：无游戏依赖的通用 OneBot 群管理插件，支持 TRSS/Yunzai 与独立 HTTP 运行",
+  "name": "groupguard-plugin", "version": "1.0.1", "type": "module",
+  "description": "群管：无游戏依赖的通用 OneBot 群管理插件，支持 TRSS/Yunzai 与独立 HTTP 运行",
   "license": "MIT", "engines": {"node": ">=20"},
   "scripts": {"test": "node --test tests/*.test.mjs", "start": "node standalone.mjs"},
   "repository": "https://github.com/719083594/GroupGuard-Plugin"

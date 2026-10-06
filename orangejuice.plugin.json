@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "title": "GroupGuard-Plugin 群卫",
+  "title": "GroupGuard-Plugin 群管",
   "description": "独立通用群管理：权限、审核、撤回、统计、通知与定时任务，无游戏依赖。",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "commands": [
     "#群管帮助",
     "#群管版本",
@@ -17,8 +17,8 @@
     "#群管白名单 添加/删除 QQ",
     "#群管开启",
     "#群管关闭",
-    "#群管禁言 @成员 10分钟",
-    "#群管解禁 @成员",
+    "禁言 @成员 [10分钟]",
+    "解禁 @成员",
     "#群管踢 @成员",
     "#群管全体禁言",
     "#群管全体解禁",
@@ -41,70 +41,70 @@
   ],
   "commandTable": [
     {
-      "title": "群卫帮助与版本",
+      "title": "群管帮助与版本",
       "command": "#群管帮助 / #群管版本",
       "description": "无游戏依赖的独立群管理；#群卫为别名。",
       "permission": "all",
       "category": "群管理"
     },
     {
-      "title": "群卫发言排行",
+      "title": "群管发言排行",
       "command": "#群管发言日榜 / #群管昨日榜 / #群管发言月榜",
       "description": "按本群、本机器人与配置时区统计发言和图片。",
       "permission": "all",
       "category": "群管理"
     },
     {
-      "title": "群卫群服务",
+      "title": "群管群服务",
       "command": "#群管日报 / #群管赞我",
       "description": "日报需设置API；点赞需在本群开启。",
       "permission": "all",
       "category": "群管理"
     },
     {
-      "title": "群卫设置与名单",
+      "title": "群管设置与名单",
       "command": "#群管状态 / #群管设置 字段 值 / #群管黑名单 添加/删除 QQ / #群管白名单 添加/删除 QQ",
       "description": "群管理权限；开启/关闭需要群主或主人。",
       "permission": "admin",
       "category": "群管理"
     },
     {
-      "title": "启用群卫",
+      "title": "启用群管",
       "command": "#群管开启 / #群管关闭",
       "description": "仅群主或主人；只更改本群。",
       "permission": "owner",
       "category": "群管理"
     },
     {
-      "title": "群卫禁言与踢人",
-      "command": "#群管禁言 @成员 10分钟 / #群管解禁 @成员 / #群管踢 @成员 / #群管全体禁言 / #群管全体解禁",
-      "description": "操作人和机器人均需管理权限，保护群主和管理员。",
+      "title": "群管禁言与踢人",
+      "command": "禁言 @成员 [10分钟] / 解禁 @成员 / #群管踢 @成员 / #群管全体禁言 / #群管全体解禁",
+      "description": "禁言可省略时长，默认10分钟；支持 #禁言、#群管禁言 和对应解禁旧入口。操作人和机器人均需管理权限，保护群主和管理员。",
       "permission": "admin",
       "category": "群管理"
     },
     {
-      "title": "群卫撤回",
+      "title": "群管撤回",
       "command": "#群管撤回（引用） / #群管撤回 @成员 5",
       "description": "只撤回本群；批量受条数和时间限制，准确显示失败数。",
       "permission": "admin",
       "category": "群管理"
     },
     {
-      "title": "群卫管理任免与头衔",
+      "title": "群管管理任免与头衔",
       "command": "#群管设管理 @成员 / #群管撤管理 @成员 / #群管头衔 @成员 头衔",
       "description": "操作人需群主或主人，机器人必须为群主。",
       "permission": "owner",
       "category": "群管理"
     },
     {
-      "title": "群卫审核",
+      "title": "群管审核",
       "command": "#群管待审核 / #群管同意 请求编号 / #群管拒绝 请求编号 / #确认加群 / #拒绝加群",
-      "description": "可引用群卫审核通知；请求绑定账号和通知群，过期不可操作。",
+      "description": "可引用群管审核通知；请求绑定账号和通知群，过期不可操作。",
       "permission": "admin",
       "category": "群管理"
     },
     {
-      "title": "群卫全局设置与维护",
+      "title": "群管全局设置与维护",
       "command": "#群管全局 字段 值 / #群管群黑名单 添加/删除 群号 / #群管群白名单 添加/删除 群号 / #群管更新 / #群管更新日志 / #群管日志",
       "description": "仅主人私聊。全局设置、源码更新和审计；不覆盖本地源码改动。",
       "permission": "master",
@@ -114,7 +114,7 @@
   "configs": [
     {
       "id": "groupguard",
-      "title": "群卫设置",
+      "title": "群管设置",
       "file": "config/local.json",
       "defaults": {
         "masters": [],

@@ -1,6 +1,6 @@
 # 功能对照与验证边界
 
-| 参考项目功能 | 群卫实现 | 验证方式 |
+| 参考项目功能 | 群管实现 | 验证方式 |
 |---|---|---|
 | GroupEntry 邀请审核四种模式 | `inviteMode` off/manual/accept/reject | 自动策略、引用审批、权限模拟；现网保留 off |
 | 多通知管理群和通知用户 | `managementGroups` / `notifyUsers` | 多群隔离、引用绑定；现网仅授权群 |
@@ -24,6 +24,6 @@
 | miao 分组帮助/配置/维护 | 分类帮助、热配置、版本/日志/安全更新 | 指令表与管理面板声明集成检查 |
 | 上游强制更新 | 不覆盖未提交代码，官方仓库快进更新 | 提供安全替代，不加入丢弃本地改动的命令 |
 
-`group-plugin` 的 DeepSeek聊天、天气查询和系统状态不是群管理：现有 AI-Plugin、WebSearch-Plugin、ServerStatus-Plugin 已分别承担相关职责，群卫不重复安装，不要求新AI密钥、天气token或浏览器/字体资源。排行榜先使用通用文字输出，不强制引入 Puppeteer。
+`group-plugin` 的 DeepSeek聊天、天气查询和系统状态不是群管理：现有 AI-Plugin、WebSearch-Plugin、ServerStatus-Plugin 已分别承担相关职责，群管不重复安装，不要求新AI密钥、天气token或浏览器/字体资源。排行榜先使用通用文字输出，不强制引入 Puppeteer。
 
 开发验证分为核心测试、独立 HTTP 服务测试、TRSS 适配与 OrangeJuice 命令表测试、授权群的真实接口测试。真实禁言/踢人、退群、成员审批、管理任免属于有影响的操作，采用模拟测试；不能把模拟通过说成已对真实成员执行成功。

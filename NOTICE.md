@@ -6,4 +6,4 @@
 - [Clarlotte/group-plugin](https://gitee.com/clarlotte/group-plugin)，参考提交 `d43bf2c34130225fd8c367a2d2604652e8923a2f`，GPL-3.0：群禁言、管理任免、批量撤回、发言统计、定时全体禁言、日报和点赞。按功能独立实现，未复制 GPL 源码或网页模板。
 - [yoimiya-kokomi/miao-plugin](https://github.com/yoimiya-kokomi/miao-plugin)，参考提交 `b01d77483268eb2236876ad0995fab27052c09ad`，MIT：分类帮助、设置与版本维护的交互思路。该插件并无独立群禁言/入群管理模块；所有游戏命令、面板、资源下载、CK/UID/API管理均未纳入。
 
-群卫的原创实现使用 MIT 许可证。参考源码只保留在开发目录 `.reference/`，被 Git 和发布打包排除。
+群管的原创实现使用 MIT 许可证。参考源码只保留在开发目录 `.reference/`，被 Git 和发布打包排除。
