@@ -1,6 +1,6 @@
 # GroupGuard-Plugin · 群卫
 
-独立、无游戏依赖的通用 QQ 群管理插件。管理逻辑直接调用标准 OneBot v11 API，支持 TRSS/Yunzai 插件安装，也支持脱离框架的独立 HTTP 服务。Node.js 20+，核心零 npm 依赖、零数据库依赖。
+通用 QQ 群管理插件，提供成员管理、入群审核、消息撤回、发言统计和定时任务。管理逻辑直接调用标准 OneBot v11 API，支持 TRSS/Yunzai 插件安装，也支持脱离框架的独立 HTTP 服务。Node.js 20+，核心零 npm 依赖、零数据库依赖。
 
 ## 安装到 TRSS/Yunzai
 
