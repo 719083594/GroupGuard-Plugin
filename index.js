@@ -30,3 +30,5 @@ export class GroupGuardInvite extends GroupGuardEvent {constructor(){super('requ
 export class GroupGuardJoin extends GroupGuardEvent {constructor(){super('request.group.add','request','add')}}
 export class GroupGuardIncrease extends GroupGuardEvent {constructor(){super('notice.group.increase','notice','increase')}}
 export class GroupGuardDecrease extends GroupGuardEvent {constructor(){super('notice.group.decrease','notice','decrease')}}
+// TRSS loads module.apps when present. Keep utilities out of its constructor scan.
+export const apps={GroupGuardCommands,GroupGuardInvite,GroupGuardJoin,GroupGuardIncrease,GroupGuardDecrease}
