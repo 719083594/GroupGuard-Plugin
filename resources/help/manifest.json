@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "hashAlgorithm": "sha256-lf-v1",
+  "cards": {
+    "groupguard-public": [
+      {
+        "file": "resources/help/groupguard-public-1.jpg",
+        "sha256": "cf19fc5bd9e7fa9c323ba89772151c1babdeeec19f0fcbfef44952d3bc833bd0",
+        "width": 1080,
+        "height": 1955
+      }
+    ],
+    "groupguard-master": [
+      {
+        "file": "resources/help/groupguard-master-1.jpg",
+        "sha256": "8b66293040f7cc30a90b54352e604725bead13b50145d7cfb26acb0af4a3aef0",
+        "width": 1080,
+        "height": 770
+      }
+    ]
+  },
+  "sources": [
+    {
+      "file": "lib/help-content.mjs",
+      "sha256": "423b0af6ae1175a7fb1a32b430e452721a2cd3581e9b38363a219d42b979bba3"
+    }
+  ]
+}

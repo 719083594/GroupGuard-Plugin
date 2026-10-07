@@ -41,7 +41,8 @@ test('分发规则覆盖帮助、群操作、兼容审核，OrangeJuice 文档�
   const entry=await import(new URL('file:///'+path.join(temporary,'GroupGuard-Plugin/index.js').replaceAll('\\','/')))
   t.after(()=>{entry.engine.close();delete globalThis.plugin;fs.rmSync(temporary,{recursive:true,force:true})})
   const p=new entry.GroupGuardCommands()
-  for(const cmd of ['禁言','禁言 10分钟','#禁言 123456789 10分钟','解禁','#群管帮助','#群管设置 likes 开','#群管禁言 123456789 10分钟','#群管全局 inviteMode manual','#确认加群'])assert.equal(p.rule.some(r=>r.reg.test(cmd)),true,cmd)
+  for(const cmd of ['禁言','禁言 10分钟','#禁言 123456789 10分钟','解禁','#群管帮助','#群管帮助 文字','/群卫帮助 文字','#群管设置 likes 开','#群管禁言 123456789 10分钟','#群管全局 inviteMode manual','#确认加群'])assert.equal(p.rule.some(r=>r.reg.test(cmd)),true,cmd)
+  for(const cmd of ['#群管帮助文字','#群管帮助 /private/path.jpg','#群管版本 文字'])assert.equal(p.rule.some(r=>r.reg.test(cmd)),false,cmd)
   if(!fs.existsSync(path.join(source,'../OrangeJuice-Plugin/integrations/yunzai/command-table.mjs'))){t.diagnostic('独立仓库未附带 OrangeJuice，跳过外部指令表集成断言');return}
   const {buildCommandTable}=await import('../../OrangeJuice-Plugin/integrations/yunzai/command-table.mjs')
   const loader={priority:[{key:'GroupGuard-Plugin/index.js',plugin:p}]}
