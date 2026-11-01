@@ -1,0 +1,1035 @@
+{
+  "schemaVersion": 2,
+  "id": "groupguard",
+  "title": "GroupGuard-Plugin 群管",
+  "version": "2.0.0",
+  "description": "独立 TRSS＋NapCat 群管理插件：成员权限、审核、撤回、统计、新闻、点赞与浏览器配置",
+  "runtime": {
+    "framework": "TRSS",
+    "adapter": "OneBot v11",
+    "provider": "NapCat",
+    "entry": "index.js",
+    "node": ">=20",
+    "independentHttp": false
+  },
+  "permissions": {
+    "master": "TRSS isMaster === true 或手动配置的 masters；自动退群主人豁免只读取 masters",
+    "enforcement": "core-and-entry"
+  },
+  "commands": [
+    "#群管帮助 [文字]",
+    "#群管版本",
+    "#群管状态",
+    "#群管开启",
+    "#群管关闭",
+    "#群管设置 <字段> <值>",
+    "#群管黑名单 [添加|删除 <QQ>]",
+    "#群管白名单 [添加|删除 <QQ>]",
+    "#群管禁言 @成员 [时长]",
+    "#群管解禁 @成员",
+    "#群管踢 @成员",
+    "#群管全体禁言",
+    "#群管全体解禁",
+    "#群管撤回（引用）或 #群管撤回 @成员 [条数]",
+    "#群管设管理 @成员",
+    "#群管撤管理 @成员",
+    "#群管头衔 @成员 <头衔>",
+    "#群管今日榜",
+    "#群管昨日榜",
+    "#群管月榜",
+    "#群管日报",
+    "#群管待审核",
+    "#群管同意 [请求编号]（也可引用通知）",
+    "#群管拒绝 [请求编号]（也可引用通知）",
+    "#群管全局 <字段> <值>",
+    "#群管群黑名单 [添加|删除 <群号>]",
+    "#群管群白名单 [添加|删除 <群号>]",
+    "#群管更新日志",
+    "#群管更新",
+    "#群管日志",
+    "赞我",
+    "撤回",
+    "禁言 @成员 [时长]",
+    "解禁 @成员"
+  ],
+  "commandTable": [
+    {
+      "name": "帮助",
+      "command": "#群管帮助 [文字]",
+      "aliases": [
+        "/群管帮助"
+      ],
+      "permission": "all",
+      "contexts": [
+        "group",
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管帮助 / #群管帮助 文字 / #群管版本"
+    },
+    {
+      "name": "版本",
+      "command": "#群管版本",
+      "aliases": [
+        "/群管版本"
+      ],
+      "permission": "all",
+      "contexts": [
+        "group",
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管帮助 / #群管帮助 文字 / #群管版本"
+    },
+    {
+      "name": "状态",
+      "command": "#群管状态",
+      "aliases": [
+        "/群管状态"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管状态 / #群管设置 字段 值 / #群管黑名单 / #群管白名单"
+    },
+    {
+      "name": "开启",
+      "command": "#群管开启",
+      "aliases": [
+        "/群管开启"
+      ],
+      "permission": "owner-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管开启 / #群管关闭"
+    },
+    {
+      "name": "关闭",
+      "command": "#群管关闭",
+      "aliases": [
+        "/群管关闭"
+      ],
+      "permission": "owner-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管开启 / #群管关闭"
+    },
+    {
+      "name": "设置",
+      "command": "#群管设置 <字段> <值>",
+      "aliases": [
+        "/群管设置"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管状态 / #群管设置 字段 值 / #群管黑名单 / #群管白名单"
+    },
+    {
+      "name": "黑名单",
+      "command": "#群管黑名单 [添加|删除 <QQ>]",
+      "aliases": [
+        "/群管黑名单"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管状态 / #群管设置 字段 值 / #群管黑名单 / #群管白名单"
+    },
+    {
+      "name": "白名单",
+      "command": "#群管白名单 [添加|删除 <QQ>]",
+      "aliases": [
+        "/群管白名单"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管状态 / #群管设置 字段 值 / #群管黑名单 / #群管白名单"
+    },
+    {
+      "name": "禁言",
+      "command": "#群管禁言 @成员 [时长]",
+      "aliases": [
+        "/群管禁言"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "禁言 @成员 [时长] / 解禁 @成员 / #群管踢 @成员 / #群管撤回"
+    },
+    {
+      "name": "解禁",
+      "command": "#群管解禁 @成员",
+      "aliases": [
+        "/群管解禁"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "禁言 @成员 [时长] / 解禁 @成员 / #群管踢 @成员 / #群管撤回"
+    },
+    {
+      "name": "踢",
+      "command": "#群管踢 @成员",
+      "aliases": [
+        "/群管踢"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "禁言 @成员 [时长] / 解禁 @成员 / #群管踢 @成员 / #群管撤回"
+    },
+    {
+      "name": "全体禁言",
+      "command": "#群管全体禁言",
+      "aliases": [
+        "/群管全体禁言"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "禁言 @成员 [时长] / 解禁 @成员 / #群管踢 @成员 / #群管撤回"
+    },
+    {
+      "name": "全体解禁",
+      "command": "#群管全体解禁",
+      "aliases": [
+        "/群管全体解禁"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "禁言 @成员 [时长] / 解禁 @成员 / #群管踢 @成员 / #群管撤回"
+    },
+    {
+      "name": "撤回",
+      "command": "#群管撤回（引用）或 #群管撤回 @成员 [条数]",
+      "aliases": [
+        "/群管撤回"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "禁言 @成员 [时长] / 解禁 @成员 / #群管踢 @成员 / #群管撤回"
+    },
+    {
+      "name": "设管理",
+      "command": "#群管设管理 @成员",
+      "aliases": [
+        "/群管设管理"
+      ],
+      "permission": "owner-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管设管理 @成员 / #群管撤管理 @成员 / #群管头衔 @成员 头衔（机器人须群主）"
+    },
+    {
+      "name": "撤管理",
+      "command": "#群管撤管理 @成员",
+      "aliases": [
+        "/群管撤管理"
+      ],
+      "permission": "owner-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管设管理 @成员 / #群管撤管理 @成员 / #群管头衔 @成员 头衔（机器人须群主）"
+    },
+    {
+      "name": "头衔",
+      "command": "#群管头衔 @成员 <头衔>",
+      "aliases": [
+        "/群管头衔"
+      ],
+      "permission": "owner-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管设管理 @成员 / #群管撤管理 @成员 / #群管头衔 @成员 头衔（机器人须群主）"
+    },
+    {
+      "name": "今日榜",
+      "command": "#群管今日榜",
+      "aliases": [
+        "/群管今日榜"
+      ],
+      "permission": "all",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管今日榜 / #群管昨日榜 / #群管月榜 / #群管日报"
+    },
+    {
+      "name": "昨日榜",
+      "command": "#群管昨日榜",
+      "aliases": [
+        "/群管昨日榜"
+      ],
+      "permission": "all",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管今日榜 / #群管昨日榜 / #群管月榜 / #群管日报"
+    },
+    {
+      "name": "月榜",
+      "command": "#群管月榜",
+      "aliases": [
+        "/群管月榜"
+      ],
+      "permission": "all",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管今日榜 / #群管昨日榜 / #群管月榜 / #群管日报"
+    },
+    {
+      "name": "日报",
+      "command": "#群管日报",
+      "aliases": [
+        "/群管日报"
+      ],
+      "permission": "all",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管今日榜 / #群管昨日榜 / #群管月榜 / #群管日报"
+    },
+    {
+      "name": "待审核",
+      "command": "#群管待审核",
+      "aliases": [
+        "/群管待审核"
+      ],
+      "permission": "request-context",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "description": "#群管待审核 / 引用通知后 #群管同意 或 #群管拒绝 / 指定请求编号"
+    },
+    {
+      "name": "同意",
+      "command": "#群管同意 [请求编号]（也可引用通知）",
+      "aliases": [
+        "/群管同意"
+      ],
+      "permission": "request-context",
+      "contexts": [
+        "group",
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管待审核 / 引用通知后 #群管同意 或 #群管拒绝 / 指定请求编号"
+    },
+    {
+      "name": "拒绝",
+      "command": "#群管拒绝 [请求编号]（也可引用通知）",
+      "aliases": [
+        "/群管拒绝"
+      ],
+      "permission": "request-context",
+      "contexts": [
+        "group",
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管待审核 / 引用通知后 #群管同意 或 #群管拒绝 / 指定请求编号"
+    },
+    {
+      "name": "全局",
+      "command": "#群管全局 <字段> <值>",
+      "aliases": [
+        "/群管全局"
+      ],
+      "permission": "master",
+      "contexts": [
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管全局 字段 值 / #群管群黑名单 / #群管群白名单 / #群管更新 / #群管更新日志 / #群管日志"
+    },
+    {
+      "name": "群黑名单",
+      "command": "#群管群黑名单 [添加|删除 <群号>]",
+      "aliases": [
+        "/群管群黑名单"
+      ],
+      "permission": "master",
+      "contexts": [
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管全局 字段 值 / #群管群黑名单 / #群管群白名单 / #群管更新 / #群管更新日志 / #群管日志"
+    },
+    {
+      "name": "群白名单",
+      "command": "#群管群白名单 [添加|删除 <群号>]",
+      "aliases": [
+        "/群管群白名单"
+      ],
+      "permission": "master",
+      "contexts": [
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管全局 字段 值 / #群管群黑名单 / #群管群白名单 / #群管更新 / #群管更新日志 / #群管日志"
+    },
+    {
+      "name": "更新日志",
+      "command": "#群管更新日志",
+      "aliases": [
+        "/群管更新日志"
+      ],
+      "permission": "master",
+      "contexts": [
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管全局 字段 值 / #群管群黑名单 / #群管群白名单 / #群管更新 / #群管更新日志 / #群管日志"
+    },
+    {
+      "name": "更新",
+      "command": "#群管更新",
+      "aliases": [
+        "/群管更新"
+      ],
+      "permission": "master",
+      "contexts": [
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管全局 字段 值 / #群管群黑名单 / #群管群白名单 / #群管更新 / #群管更新日志 / #群管日志"
+    },
+    {
+      "name": "日志",
+      "command": "#群管日志",
+      "aliases": [
+        "/群管日志"
+      ],
+      "permission": "master",
+      "contexts": [
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管全局 字段 值 / #群管群黑名单 / #群管群白名单 / #群管更新 / #群管更新日志 / #群管日志"
+    },
+    {
+      "name": "赞我",
+      "command": "赞我",
+      "aliases": [],
+      "permission": "all",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "requiresFeature": "likes",
+      "description": "裸词精确匹配；每机器人每天最多调用10次，每次 times:10，跨群共用并持久化。"
+    },
+    {
+      "name": "撤回简写",
+      "command": "撤回",
+      "aliases": [],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true,
+      "requiresReply": true,
+      "description": "仅有效群消息引用，复用正式引用撤回。"
+    },
+    {
+      "name": "禁言简写",
+      "command": "禁言 @成员 [时长]",
+      "aliases": [
+        "#禁言",
+        "/禁言"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true
+    },
+    {
+      "name": "解禁简写",
+      "command": "解禁 @成员",
+      "aliases": [
+        "#解禁",
+        "/解禁"
+      ],
+      "permission": "admin-or-master",
+      "contexts": [
+        "group"
+      ],
+      "requiresEnabled": true
+    }
+  ],
+  "configs": [
+    {
+      "id": "groupguard",
+      "file": "config/local.json",
+      "reload": "hot",
+      "defaults": {
+        "masters": [],
+        "managementGroups": [],
+        "notifyUsers": [],
+        "inviteMode": "off",
+        "allowInviterConfirm": false,
+        "allowAdminInvite": false,
+        "notifyInviter": false,
+        "requestExpireMinutes": 5,
+        "maxPendingRequests": 20,
+        "blackGroups": [],
+        "whiteGroups": [],
+        "autoQuitEnabled": false,
+        "minGroupMember": 10,
+        "autoQuitTime": "00:00",
+        "autoQuitMessage": "本群成员 {memberCount} 人，未达到 {minMember} 人，机器人将退出。",
+        "schemaVersion": 2,
+        "newsSources": [],
+        "legacy": {},
+        "timezone": "Asia/Shanghai",
+        "groups": []
+      },
+      "fields": [
+        {
+          "path": "masters",
+          "label": "插件主人 QQ（只手动修改）",
+          "type": "array",
+          "scope": "global",
+          "chatWritable": false,
+          "sensitive": false,
+          "items": {
+            "type": "string",
+            "format": "qq-or-group-id"
+          },
+          "maxItems": 5000,
+          "editPolicy": "manual-file-only",
+          "description": "只手动编辑 config/local.json；普通命令识别 isMaster 或 masters，自动退群豁免只读 masters。"
+        },
+        {
+          "path": "managementGroups",
+          "label": "审核管理群",
+          "type": "array",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "items": {
+            "type": "string",
+            "format": "qq-or-group-id"
+          },
+          "maxItems": 5000
+        },
+        {
+          "path": "notifyUsers",
+          "label": "私聊通知与审核用户",
+          "type": "array",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "items": {
+            "type": "string",
+            "format": "qq-or-group-id"
+          },
+          "maxItems": 5000
+        },
+        {
+          "path": "inviteMode",
+          "label": "机器人邀请审核模式",
+          "type": "string",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "enum": [
+            "off",
+            "manual",
+            "accept",
+            "reject"
+          ]
+        },
+        {
+          "path": "allowInviterConfirm",
+          "label": "邀请者自行确认",
+          "type": "boolean",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false
+        },
+        {
+          "path": "allowAdminInvite",
+          "label": "管理员邀请免审",
+          "type": "boolean",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false
+        },
+        {
+          "path": "notifyInviter",
+          "label": "通知邀请人",
+          "type": "boolean",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false
+        },
+        {
+          "path": "requestExpireMinutes",
+          "label": "请求过期分钟数",
+          "type": "integer",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "min": 1,
+          "max": 60
+        },
+        {
+          "path": "maxPendingRequests",
+          "label": "实例共用待审上限",
+          "type": "integer",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "min": 1,
+          "max": 100
+        },
+        {
+          "path": "blackGroups",
+          "label": "群黑名单",
+          "type": "array",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "items": {
+            "type": "string",
+            "format": "qq-or-group-id"
+          },
+          "maxItems": 5000
+        },
+        {
+          "path": "whiteGroups",
+          "label": "群白名单",
+          "type": "array",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "items": {
+            "type": "string",
+            "format": "qq-or-group-id"
+          },
+          "maxItems": 5000
+        },
+        {
+          "path": "autoQuitEnabled",
+          "label": "自动退群",
+          "type": "boolean",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "description": "入群事件由全局开关控制；每日巡检只处理已配置并启用的群。"
+        },
+        {
+          "path": "minGroupMember",
+          "label": "最低群人数",
+          "type": "integer",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "min": 1,
+          "max": 10000
+        },
+        {
+          "path": "autoQuitTime",
+          "label": "退群巡检时间",
+          "type": "string",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "format": "HH:mm"
+        },
+        {
+          "path": "autoQuitMessage",
+          "label": "退群提示模板",
+          "type": "string",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "maxLength": 2000
+        },
+        {
+          "path": "schemaVersion",
+          "label": "配置结构版本",
+          "type": "integer",
+          "scope": "global",
+          "chatWritable": false,
+          "sensitive": false,
+          "editPolicy": "internal",
+          "hidden": true
+        },
+        {
+          "path": "newsSources",
+          "label": "按机器人与群隔离的新闻来源",
+          "type": "array",
+          "scope": "global",
+          "chatWritable": false,
+          "sensitive": true,
+          "editPolicy": "browser-only",
+          "maxItems": 1000,
+          "description": "浏览器管理界面按精确机器人与群维护；不允许聊天 setter 或通配来源。",
+          "keyWriteContract": {
+            "actions": [
+              "keep",
+              "replace",
+              "clear"
+            ],
+            "defaultAction": "keep",
+            "readView": "hasKey only"
+          },
+          "fields": [
+            {
+              "name": "botId",
+              "type": "string",
+              "format": "qq-id",
+              "sensitive": false
+            },
+            {
+              "name": "groupId",
+              "type": "string",
+              "format": "group-id",
+              "sensitive": false
+            },
+            {
+              "name": "url",
+              "type": "string",
+              "format": "http-or-https-url",
+              "sensitive": true
+            },
+            {
+              "name": "key",
+              "type": "string",
+              "sensitive": true,
+              "writeOnly": true
+            },
+            {
+              "name": "authType",
+              "type": "string",
+              "enum": [
+                "none",
+                "bearer",
+                "header",
+                "query"
+              ],
+              "sensitive": false
+            },
+            {
+              "name": "authName",
+              "type": "string",
+              "sensitive": false,
+              "description": "header/query 时必须提供合法名称；none/bearer 为空"
+            }
+          ]
+        },
+        {
+          "path": "legacy",
+          "label": "受保护的迁移信息",
+          "type": "object",
+          "scope": "global",
+          "chatWritable": false,
+          "sensitive": true,
+          "editPolicy": "internal",
+          "hidden": true
+        },
+        {
+          "path": "timezone",
+          "label": "日期与任务时区",
+          "type": "string",
+          "scope": "global",
+          "chatWritable": true,
+          "sensitive": false,
+          "format": "iana-timezone"
+        },
+        {
+          "path": "groups",
+          "label": "本群设置",
+          "type": "array",
+          "scope": "global",
+          "chatWritable": false,
+          "sensitive": false,
+          "editPolicy": "structured-manager",
+          "maxItems": 1000
+        },
+        {
+          "path": "groups.*.botId",
+          "label": "机器人 QQ",
+          "type": "string",
+          "scope": "group",
+          "chatWritable": false,
+          "sensitive": false,
+          "editPolicy": "identity-not-chat-writable"
+        },
+        {
+          "path": "groups.*.groupId",
+          "label": "群号",
+          "type": "string",
+          "scope": "group",
+          "chatWritable": false,
+          "sensitive": false,
+          "editPolicy": "identity-not-chat-writable"
+        },
+        {
+          "path": "groups.*.enabled",
+          "label": "启用本群",
+          "type": "boolean",
+          "scope": "group",
+          "chatWritable": false,
+          "sensitive": false,
+          "editPolicy": "dedicated-command-or-manager",
+          "description": "聊天仅通过 #群管开启 / #群管关闭调整。"
+        },
+        {
+          "path": "groups.*.statistics",
+          "label": "发言统计",
+          "type": "boolean",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false
+        },
+        {
+          "path": "groups.*.recall",
+          "label": "消息撤回",
+          "type": "boolean",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false
+        },
+        {
+          "path": "groups.*.likes",
+          "label": "QQ 点赞",
+          "type": "boolean",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false
+        },
+        {
+          "path": "groups.*.rankLimit",
+          "label": "排行人数",
+          "type": "integer",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "min": 1,
+          "max": 50
+        },
+        {
+          "path": "groups.*.recallLimit",
+          "label": "最大批量撤回条数",
+          "type": "integer",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "min": 1,
+          "max": 50
+        },
+        {
+          "path": "groups.*.recallWindowMinutes",
+          "label": "批量撤回窗口（分钟）",
+          "type": "integer",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "min": 1,
+          "max": 120
+        },
+        {
+          "path": "groups.*.welcomeEnabled",
+          "label": "入群欢迎",
+          "type": "boolean",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false
+        },
+        {
+          "path": "groups.*.leaveEnabled",
+          "label": "离群通知",
+          "type": "boolean",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false
+        },
+        {
+          "path": "groups.*.welcomeMessage",
+          "label": "欢迎模板",
+          "type": "string",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "maxLength": 2000
+        },
+        {
+          "path": "groups.*.leaveMessage",
+          "label": "离群模板",
+          "type": "string",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "maxLength": 2000
+        },
+        {
+          "path": "groups.*.dailyEnabled",
+          "label": "定时新闻",
+          "type": "boolean",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false
+        },
+        {
+          "path": "groups.*.dailyTime",
+          "label": "新闻时间",
+          "type": "string",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "format": "HH:mm"
+        },
+        {
+          "path": "groups.*.joinMode",
+          "label": "成员申请审核模式",
+          "type": "string",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "enum": [
+            "off",
+            "manual",
+            "answer",
+            "accept",
+            "reject"
+          ]
+        },
+        {
+          "path": "groups.*.question",
+          "label": "入群问题提示",
+          "type": "string",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "maxLength": 2000
+        },
+        {
+          "path": "groups.*.answers",
+          "label": "可接受答案",
+          "type": "array",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "maxItems": 100
+        },
+        {
+          "path": "groups.*.exactMatch",
+          "label": "答案精确匹配",
+          "type": "boolean",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false
+        },
+        {
+          "path": "groups.*.minLevel",
+          "label": "最低 QQ 等级（0 关闭）",
+          "type": "integer",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "min": 0,
+          "max": 200
+        },
+        {
+          "path": "groups.*.blackUsers",
+          "label": "成员黑名单",
+          "type": "array",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "items": {
+            "type": "string",
+            "format": "qq-or-group-id"
+          },
+          "maxItems": 5000
+        },
+        {
+          "path": "groups.*.whiteUsers",
+          "label": "成员白名单",
+          "type": "array",
+          "scope": "group",
+          "chatWritable": true,
+          "sensitive": false,
+          "items": {
+            "type": "string",
+            "format": "qq-or-group-id"
+          },
+          "maxItems": 5000
+        }
+      ]
+    }
+  ],
+  "management": {
+    "manifestOnly": false,
+    "browserStatus": "implemented",
+    "serverProvided": true,
+    "embeddedIn": "TRSS plugin process",
+    "defaultHost": "127.0.0.1",
+    "defaultPort": 15083,
+    "authentication": "password-and-session-csrf",
+    "environment": {
+      "enabled": "GROUPGUARD_ADMIN_ENABLED",
+      "host": "GROUPGUARD_ADMIN_HOST",
+      "port": "GROUPGUARD_ADMIN_PORT"
+    },
+    "description": "插件内置配置页面；无额外系统服务，不接收OneBot事件；Docker只映射宿主回环地址。"
+  },
+  "privacy": {
+    "instanceConfigPublished": false,
+    "instanceDataPublished": false,
+    "secretFields": [
+      "newsSources.*.key",
+      "newsSources.*.url",
+      "legacy"
+    ]
+  }
+}

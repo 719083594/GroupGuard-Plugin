@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>GroupGuard · 群管配置</title>
+<link rel="stylesheet" href="/style.css">
+<script type="module" src="/app.js"></script>
+</head>
+<body>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<main id="loginView" class="login-layout">
+  <section class="login-intro"><div class="brand-mark">GG</div><p class="eyebrow">GROUPGUARD 2.0</p><h1>群管配置，<br>集中管理。</h1><p>同一个插件，按机器人与群分别设置。<br>管理策略、群内功能与新闻来源，在这里调整。</p><div class="intro-note">本机管理入口 · 配置保存后热读取</div></section>
+  <section class="login-card"><p class="eyebrow">管理员登录</p><h2>欢迎回来</h2><p class="muted">使用本机初始化的管理密码登录。</p>
+    <form id="loginForm"><label for="loginPassword">管理密码</label><input id="loginPassword" type="password" required autocomplete="current-password" data-disable-busy><button id="loginButton" class="button primary full" type="submit" data-disable-busy>登录控制台</button></form>
+    <p class="security-note">初始密码登录后必须修改。密码和新闻 Key 不会保存在此页面的本地存储中。</p>
+  </section>
+</main>
+<div id="appView" class="app-layout" hidden>
+  <aside class="sidebar"><a class="brand" href="/" aria-label="GroupGuard 首页"><span class="brand-mark small">GG</span><span>群管<span class="brand-caption">GROUPGUARD</span></span></a><p class="nav-label">配置管理</p>
+    <nav aria-label="控制台导航"><button class="nav-item active" data-view="groups" type="button">本群设置<span>按机器人与群配置</span></button><button class="nav-item" data-view="news" type="button">新闻来源<span>API 与鉴权 Key</span></button><button class="nav-item" data-view="global" type="button">全局设置<span>审核、邀请与自动退群</span></button><button class="nav-item" data-view="password" type="button">账号安全<span>修改管理密码</span></button></nav>
+    <div class="sidebar-foot"><span class="status-dot"></span> TRSS + NapCat<p>配置界面独立于群消息处理<br>停止本页面不影响插件运行</p></div>
+  </aside>
+  <div class="workspace"><header class="topbar"><div><p class="eyebrow">GROUPGUARD / CONSOLE</p><h1 id="pageTitle">本群设置</h1></div><div class="topbar-actions"><button id="reloadButton" class="button quiet" type="button" data-disable-busy>重新加载</button><button id="logoutButton" class="button quiet" type="button" data-disable-busy>退出登录</button></div></header>
+    <div class="content"><div id="conflictBanner" class="callout warning" role="alert" hidden><strong>请先重新加载配置</strong><p id="conflictMessage"></p><button id="conflictReload" type="button" class="button" data-disable-busy>重新加载并核对</button></div>
+      <div id="masterNotice" class="callout master-notice"><strong id="mastersStatus">正在读取主人配置状态…</strong><p>插件主人 <code>masters</code> 只能手动编辑 <code>config/local.json</code>。此页面不显示主人 QQ，也不能添加或更换主人；自动退群豁免不会自动继承 TRSS 主人。</p></div>
+      <section id="groupsView" class="view"><div class="section-intro"><div><h2>为每个群保留独立设置</h2><p class="muted">选择配置对象后编辑。总开关关闭时，普通群管理与辅助功能不运行。</p></div><button id="addGroupButton" class="button primary" type="button" data-disable-busy>添加群配置</button></div>
+        <div class="card scope-card"><label for="groupPicker">当前配置对象</label><select id="groupPicker" data-disable-busy></select><button id="removeGroupButton" class="button danger-text" type="button" data-disable-busy>移除此配置</button></div>
+        <div id="groupsEmpty" class="empty-state" hidden><h3>还没有群配置</h3><p>先添加机器人 QQ 与群号，再开启需要的功能。新配置默认关闭。</p></div><form id="groupForm"><div id="groupFields"></div><div class="form-footer"><span class="muted">只保存当前机器人与群，不覆盖其他群。</span><button class="button primary write-action" type="submit" data-disable-busy>保存本群设置</button></div></form>
+      </section>
+      <section id="newsView" class="view" hidden><div class="section-intro"><div><h2>每个群使用自己的新闻来源</h2><p class="muted">手动日报与定时推送共用此来源。API 与 Key 不通过聊天指令配置。</p></div></div>
+        <div class="card"><label for="newsPicker">已有来源或当前群</label><select id="newsPicker" data-disable-busy></select><p id="newsScopeHint" class="field-help" aria-live="polite">切换机器人或群时会加载对应来源；新对象会清空接口和鉴权，避免混用其他群的设置。</p></div>
+        <form id="newsForm" class="card"><div class="card-heading"><h3>接口与鉴权</h3><span id="keyStatus" class="pill">未配置 Key</span></div><div class="field-grid">
+          <div class="field"><label for="newsBot">机器人 QQ</label><input id="newsBot" list="botSuggestions" inputmode="numeric" required pattern="[1-9][0-9]{3,15}" autocomplete="off" data-disable-busy><p class="field-help">可选择已连接账号或手填；新闻来源不支持通配符 *。</p></div>
+          <div class="field"><label for="newsGroup">群号</label><input id="newsGroup" inputmode="numeric" required pattern="[1-9][0-9]{3,15}" autocomplete="off" data-disable-busy></div>
+          <div class="field wide"><label for="newsUrl">新闻 API 地址</label><input id="newsUrl" type="url" required placeholder="https://example.com/news" autocomplete="off" spellcheck="false" data-disable-busy><p class="field-help">支持 HTTP(S)，不要在地址中填写用户名密码。</p></div>
+          <div class="field"><label for="newsAuthType">鉴权方式</label><select id="newsAuthType" data-disable-busy><option value="none">不使用 Key</option><option value="bearer">Bearer Token</option><option value="header">自定义请求头</option><option value="query">查询参数</option></select></div>
+          <div class="field"><label for="newsAuthName">请求头 / 参数名称</label><input id="newsAuthName" maxlength="128" autocomplete="off" spellcheck="false" data-disable-busy><p class="field-help">仅自定义请求头或查询参数需要填写。</p></div>
+          <div class="field"><label for="keyAction">Key 操作</label><select id="keyAction" data-disable-busy><option value="keep">保留现有 Key</option><option value="replace">替换为新的 Key</option><option value="clear">清空现有 Key</option></select><p class="field-help">保存其他设置时保留现有 Key；服务器不会回传原文。</p></div>
+          <div class="field"><label for="newsKey">新的 Key</label><input id="newsKey" type="password" autocomplete="off" spellcheck="false" maxlength="8192" disabled><p class="field-help">仅“替换”时填写。提交后输入框会清空。</p></div>
+        </div><div class="form-footer"><button id="removeNewsButton" class="button danger-text write-action" type="button" data-disable-busy>移除此来源</button><button class="button primary write-action" type="submit" data-disable-busy>保存新闻来源</button></div></form>
+      </section>
+      <section id="globalView" class="view" hidden><div class="section-intro"><div><h2>整个插件实例的共同策略</h2><p class="muted">修改前核对影响范围。群名单、审核队列和自动退群由所有接入账号共用。</p></div></div><form id="globalForm"><div id="globalFields"></div><div class="form-footer"><span class="muted">主人名单与新闻凭据不在此表单中修改。</span><button class="button primary write-action" type="submit" data-disable-busy>保存全局设置</button></div></form></section>
+      <section id="passwordView" class="view" hidden><div class="section-intro"><div><h2 id="passwordTitle">修改管理密码</h2><p id="passwordHint" class="muted">修改后所有管理会话退出，请使用新密码重新登录。</p></div></div><form id="passwordForm" class="card password-card"><div class="field"><label for="currentPassword">当前密码</label><input id="currentPassword" type="password" required autocomplete="current-password" data-disable-busy></div><div class="field"><label for="newPassword">新密码</label><input id="newPassword" type="password" minlength="12" required autocomplete="new-password" data-disable-busy><p class="field-help">至少 12 个字符，请使用与其他服务不同的密码。</p></div><div class="field"><label for="confirmPassword">确认新密码</label><input id="confirmPassword" type="password" minlength="12" required autocomplete="new-password" data-disable-busy></div><button class="button primary" type="submit" data-disable-busy>保存新密码并退出</button></form></section>
+    </div>
+  </div>
+</div>
+<datalist id="botSuggestions"></datalist>
+<dialog id="addGroupDialog"><form id="addGroupForm"><h2>添加群配置</h2><p class="muted">添加配置不代表机器人已经加入该群。</p><div class="field"><label for="addBot">机器人 QQ</label><input id="addBot" list="botSuggestions" required autocomplete="off" data-disable-busy><p class="field-help">可手填 QQ，或用 * 作为通配配置。新闻来源必须使用具体账号。</p></div><div class="field"><label for="addGroup">群号</label><input id="addGroup" required inputmode="numeric" pattern="[1-9][0-9]{3,15}" autocomplete="off" data-disable-busy></div><div class="dialog-actions"><button id="cancelAddGroup" class="button" type="button" data-disable-busy>取消</button><button class="button primary write-action" type="submit" data-disable-busy>添加</button></div></form></dialog>
+<dialog id="removeDialog"><h2 id="removeTitle">确认移除配置</h2><p id="removeDescription"></p><p class="muted">移除配置不会清空统计、审核或点赞运行数据。</p><div class="dialog-actions"><button id="cancelRemove" class="button" type="button" data-disable-busy>取消</button><button id="confirmRemove" class="button danger write-action" type="button" data-disable-busy>确认移除</button></div></dialog>
+</body>
+</html>

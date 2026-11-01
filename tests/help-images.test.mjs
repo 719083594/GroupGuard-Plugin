@@ -3,89 +3,84 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import {GroupGuard,HELP} from '../lib/core.mjs'
-import {OneBotAdapter} from '../lib/adapter.mjs'
-import {createHelpImages} from '../lib/help-images.mjs'
-import {helpTopics} from '../lib/help-content.mjs'
+import {fileURLToPath} from 'node:url'
+import {createHelpImages,jpegDimensions,sha256,sourceHash} from '../lib/help-images.mjs'
+import {helpTopics,publicHelpText,masterHelpText} from '../lib/help-content.mjs'
 
-const jpeg=()=>Buffer.from([255,216,1,2,255,217])
-const BOT='100000001',GROUP='200000001',MEMBER='300000001',MASTER='400000001'
-function fixture(t,helpImages){
-  const root=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-help-')),calls=[],replies=[]
-  let now=10000
-  const adapter=new OneBotAdapter(async(action,params)=>{
-    calls.push({action,params})
-    if(action==='send_group_msg'||action==='send_private_msg')replies.push(params.message)
-    return {status:'ok',retcode:0,data:action==='get_group_member_info'?{role:'member'}:{message_id:1}}
-  })
-  const engine=new GroupGuard(root,{helpImages,now:()=>now,onError:()=>{}})
-  engine.config.update(config=>{config.masters=[MASTER]})
-  t.after(()=>{engine.close();fs.rmSync(root,{recursive:true,force:true})})
-  return {engine,calls,replies,run:(msg,extra={})=>{now+=1100;return engine.handle({self_id:BOT,user_id:MEMBER,group_id:GROUP,msg,message:[],...extra},adapter)}}
+// Minimal SOF metadata fixture; production assets are rendered and visually checked.
+const jpeg=(width=10,height=20)=>Buffer.from([255,216,255,192,0,11,8,height>>8,height&255,width>>8,width&255,1,1,0x11,0,255,217])
+function fixture(t){
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-help-'))
+  fs.mkdirSync(path.join(root,'lib'));fs.mkdirSync(path.join(root,'resources/help'),{recursive:true})
+  fs.writeFileSync(path.join(root,'lib/help-content.mjs'),'// fixture\n')
+  fs.writeFileSync(path.join(root,'resources/help-template.html'),'<html>fixture</html>\n')
+  const manifest={version:1,hashAlgorithm:'sha256-lf-v1',cards:{},sources:['lib/help-content.mjs','resources/help-template.html'].map(file=>({file,sha256:sourceHash(fs.readFileSync(path.join(root,file)))}))}
+  for(const topic of ['groupguard-public','groupguard-master']){
+    const bytes=jpeg(),file=`resources/help/${topic}-1.jpg`;fs.writeFileSync(path.join(root,file),bytes)
+    manifest.cards[topic]=[{file,sha256:sha256(bytes),width:10,height:20}]
+  }
+  const save=()=>fs.writeFileSync(path.join(root,'resources/help/manifest.json'),JSON.stringify(manifest))
+  save();t.after(()=>fs.rmSync(root,{recursive:true,force:true}))
+  return {root,manifest,save,read:createHelpImages({root})}
 }
 
-test('公开固定帮助定义不含主人全局维护命令，独立主人页明确私聊',()=>{
-  const publicText=JSON.stringify(helpTopics['groupguard-public'])
-  const masterText=JSON.stringify(helpTopics['groupguard-master'])
-  assert(publicText.includes('#群管帮助 文字'))
-  for(const command of ['#群管全局','#群管群黑名单','#群管群白名单','#群管更新','#群管日志']){
-    assert(!publicText.includes(command),command)
-    assert(masterText.includes(command),command)
-  }
-  assert(masterText.includes('仅机器人主人私聊'))
-  assert.deepEqual(Object.keys(helpTopics).sort(),['groupguard-master','groupguard-public'])
+test('最终公开/主人文字和固定卡片一致，旧入口不再被展示',()=>{
+  const publicText=publicHelpText('2.0.0'),masterText=masterHelpText('2.0.0')
+  for(const command of ['#群管今日榜','#群管昨日榜','#群管月榜','引用后发送 撤回','赞我','100 赞'])assert(publicText.includes(command),command)
+  for(const command of ['#群管全局','#群管群黑名单','#群管群白名单','#群管更新','#群管日志']){assert(!publicText.includes(command));assert(masterText.includes(command))}
+  for(const removed of ['群卫','发言日榜','发言月榜','#群管赞我','#确认加群','#拒绝加群','scheduledMute','autoBlacklistOnLeave'])assert(!JSON.stringify(helpTopics).includes(removed),removed)
+  assert(masterText.includes('仅机器人主人私聊'));assert(masterText.includes('masters'))
 })
 
-test('共享服务懒加载且只读固定topic；群内主人不能取得主人私聊页',async()=>{
-  let loads=0,factories=0
-  const requests=[]
-  const read=createHelpImages({root:'public-source-root',loadService:async()=>{
-    loads++
-    return {createStaticHelpReader:options=>{
-      factories++;assert.deepEqual(options,{root:'public-source-root'})
-      return request=>{requests.push(request);return [jpeg()]}
-    }}
-  }})
-  assert.equal(loads,0)
-  await Promise.all([read({isMaster:true,privateChat:false,topic:'../../data/session.json'}),read({isMaster:false,privateChat:true})])
-  assert.equal(loads,1);assert.equal(factories,1)
-  assert.deepEqual(requests,[{topic:'groupguard-public',private:false},{topic:'groupguard-public',private:false}])
-  requests.length=0
+test('本插件静态读取，只有布尔主人且私聊才附加主人页',async t=>{
+  const f=fixture(t)
+  assert.equal((await f.read({})).length,1)
+  assert.equal((await f.read({isMaster:true,privateChat:false})).length,1)
+  assert.equal((await f.read({isMaster:false,privateChat:true})).length,1)
+  assert.equal((await f.read({isMaster:'true',privateChat:true})).length,1)
+  assert.equal((await f.read({isMaster:true,privateChat:true})).length,2)
+  assert.equal((await f.read({topic:'../../data/state.json'})).length,1)
+})
+
+test('来源哈希忽略CRLF差异，但内容变化立即使现有reader失效',async t=>{
+  const f=fixture(t)
+  fs.writeFileSync(path.join(f.root,'lib/help-content.mjs'),'// fixture\r\n')
+  assert.equal((await f.read()).length,1)
+  fs.appendFileSync(path.join(f.root,'lib/help-content.mjs'),'// changed\n')
+  assert.equal(await f.read(),null)
+})
+
+test('图片损坏、尺寸不符、路径越界、私有页混入公开页均降级',async t=>{
+  const cases=[
+    f=>{fs.writeFileSync(path.join(f.root,f.manifest.cards['groupguard-public'][0].file),'broken')},
+    f=>{f.manifest.cards['groupguard-public'][0].width=11},
+    f=>{f.manifest.cards['groupguard-public'][0].file='resources/help/../../data/state.json'},
+    f=>{f.manifest.cards['groupguard-public'][0]={...f.manifest.cards['groupguard-master'][0]}},
+    f=>{f.manifest.sources[0].file='config/local.json'},
+    f=>{f.manifest.cards['groupguard-public']=Array.from({length:9},()=>({...f.manifest.cards['groupguard-public'][0]}))},
+    f=>{const page=f.manifest.cards['groupguard-public'][0],bytes=Buffer.alloc(2*1024*1024+1);fs.writeFileSync(path.join(f.root,page.file),bytes);page.sha256=sha256(bytes)}
+  ]
+  for(const change of cases){const f=fixture(t);change(f);f.save();assert.equal(await f.read({isMaster:true,privateChat:true}),null)}
+})
+
+test('缺清单、缺模板与无效JPEG均只返回null，不外泄路径',async t=>{
+  const f=fixture(t)
+  fs.unlinkSync(path.join(f.root,'resources/help-template.html'));assert.equal(await f.read(),null)
+  assert.equal(await createHelpImages({root:path.join(f.root,'missing')})(),null)
+  for(const bytes of [Buffer.from('not jpeg'),Buffer.from([255,216,255,217])])assert.equal(jpegDimensions(bytes),null)
+})
+
+test('目录链接不能绕过来源文件真实路径校验',async t=>{
+  const f=fixture(t),linked=path.join(f.root,'lib'),actual=path.join(f.root,'other-lib')
+  fs.renameSync(linked,actual)
+  try{fs.symlinkSync(actual,linked,process.platform==='win32'?'junction':'dir')}
+  catch(error){if(['EPERM','EACCES','ENOTSUP'].includes(error.code)){t.skip('host does not permit test directory links');return}throw error}
+  assert.equal(await f.read(),null)
+})
+
+test('发布资产自包含、两张JPEG均通过来源/哈希/尺寸校验',async()=>{
+  const root=fileURLToPath(new URL('..',import.meta.url)),read=createHelpImages({root})
   const images=await read({isMaster:true,privateChat:true})
-  assert.equal(images.length,2)
-  assert.deepEqual(requests,[{topic:'groupguard-public',private:false},{topic:'groupguard-master',private:false}])
-})
-
-test('共享reader缺失或图片校验失败保留完整文字fallback，不触发渲染',async()=>{
-  for(const loadService of [async()=>{throw new Error('missing sibling')},async()=>({}),async()=>({createStaticHelpReader:()=>()=>null}),async()=>({createStaticHelpReader:()=>()=>['/private/path.jpg']})]){
-    assert.equal(await createHelpImages({root:'public-source-root',loadService})({}),null)
-  }
-})
-
-test('帮助以OneBot内存图片发送，文字后缀跳过reader，非帮助命令不读图',async t=>{
-  const contexts=[],f=fixture(t,async context=>{contexts.push(context);return [jpeg()]})
-  await f.run('#群管帮助')
-  assert.deepEqual(contexts,[{isMaster:false,privateChat:false}])
-  assert.deepEqual(f.replies.at(-1),[{type:'image',data:{file:'base64://'+jpeg().toString('base64')}}])
-  await f.run('#群管帮助 文字')
-  assert.equal(contexts.length,1)
-  assert.deepEqual(f.replies.at(-1),[{type:'text',data:{text:HELP}}])
-  await f.run('#群卫帮助',{group_id:'',user_id:MASTER})
-  assert.deepEqual(contexts.at(-1),{isMaster:true,privateChat:true})
-  await f.run('#群管帮助',{user_id:MASTER})
-  assert.deepEqual(contexts.at(-1),{isMaster:true,privateChat:false})
-  await f.run('#群管版本')
-  assert.equal(contexts.length,3)
-  await f.run('#群管禁言 '+MASTER+' 1分钟')
-  assert.equal(contexts.length,3)
-  assert.equal(f.calls.some(call=>call.action==='set_group_ban'),false)
-})
-
-test('reader异常和无效图片路径均退回原HELP，不把路径交给OneBot',async t=>{
-  for(const helpImages of [async()=>{throw new Error('private details')},async()=>['/private/account.jpg'],async()=>[Buffer.from('not an image')],async()=>Array.from({length:9},jpeg)]){
-    const f=fixture(t,helpImages)
-    await f.run('#群管帮助')
-    assert.deepEqual(f.replies.at(-1),[{type:'text',data:{text:HELP}}])
-    assert.equal(f.calls.some(call=>JSON.stringify(call.params).includes('/private/')),false)
-  }
+  assert(images&&images.length===2,'run scripts/render-help.mjs after changing help content/template')
+  for(const bytes of images){const dimensions=jpegDimensions(bytes);assert.equal(dimensions.width,1080);assert(dimensions.height>500)}
 })

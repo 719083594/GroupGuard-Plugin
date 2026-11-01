@@ -6,6 +6,7 @@ dist/
 node_modules/
 *.tmp
 .verification/
+.test-tmp/
 .env*
 *.log
 *.db

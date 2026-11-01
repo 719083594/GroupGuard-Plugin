@@ -1,30 +1,91 @@
 import fs from 'node:fs'
-import {groupDefaults} from '../lib/config.mjs'
-const defaults=JSON.parse(fs.readFileSync(new URL('../config/default.json',import.meta.url)))
-const labels={masters:'主人QQ列表（TRSS同时继承框架主人）',managementGroups:'审核通知管理群',notifyUsers:'通知与审核管理用户',inviteMode:'机器人邀请审核模式',allowInviterConfirm:'允许邀请者自审',allowAdminInvite:'允许管理员邀请免审',notifyInviter:'私聊通知邀请人',requestExpireMinutes:'请求过期分钟数',maxPendingRequests:'最大待审核请求',blackGroups:'群黑名单',whiteGroups:'群白名单',autoQuitEnabled:'自动退群',minGroupMember:'最低群人数',autoQuitTime:'退群巡检时间',autoQuitMessage:'退群通知模板',dailyApi:'日报API网址',timezone:'定时任务与统计时区',groups:'逐群设置',botId:'机器人QQ（*表示所有）',groupId:'群号',enabled:'启用本群',statistics:'发言统计',recall:'单条与批量撤回',likes:'QQ点赞',rankLimit:'排行榜人数',recallLimit:'最大撤回条数',recallWindowMinutes:'撤回记录窗口分钟数',welcomeEnabled:'入群欢迎',leaveEnabled:'退群通知',welcomeMessage:'欢迎模板',leaveMessage:'退群模板',dailyEnabled:'定时日报',dailyTime:'日报时间',scheduledMute:'定时全体禁言',muteTime:'全体禁言时间',unmuteTime:'全体解禁时间',joinMode:'成员加群审核模式',question:'入群问题提示',answers:'正确答案列表',exactMatch:'答案精确匹配',minLevel:'最低QQ等级（0关闭）',blackUsers:'成员黑名单',whiteUsers:'成员白名单',autoBlacklistOnLeave:'离群自动拉黑'}
+import {groupDefaults,GROUP_CHAT_FIELDS,GLOBAL_CHAT_FIELDS} from '../lib/config.mjs'
+import {MAIN_COMMANDS,COMMAND_DEFINITIONS} from '../lib/command.mjs'
+
+const defaults=JSON.parse(fs.readFileSync(new URL('../config/default.json',import.meta.url),'utf8'))
+const pkg=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),'utf8'))
+const labels={
+  masters:'插件主人 QQ（只手动修改）',managementGroups:'审核管理群',notifyUsers:'私聊通知与审核用户',
+  inviteMode:'机器人邀请审核模式',allowInviterConfirm:'邀请者自行确认',allowAdminInvite:'管理员邀请免审',notifyInviter:'通知邀请人',
+  requestExpireMinutes:'请求过期分钟数',maxPendingRequests:'实例共用待审上限',blackGroups:'群黑名单',whiteGroups:'群白名单',
+  autoQuitEnabled:'自动退群',minGroupMember:'最低群人数',autoQuitTime:'退群巡检时间',autoQuitMessage:'退群提示模板',
+  timezone:'日期与任务时区',groups:'本群设置',botId:'机器人 QQ',groupId:'群号',enabled:'启用本群',statistics:'发言统计',
+  recall:'消息撤回',likes:'QQ 点赞',rankLimit:'排行人数',recallLimit:'最大批量撤回条数',recallWindowMinutes:'批量撤回窗口（分钟）',
+  welcomeEnabled:'入群欢迎',leaveEnabled:'离群通知',welcomeMessage:'欢迎模板',leaveMessage:'离群模板',
+  dailyEnabled:'定时新闻',dailyTime:'新闻时间',joinMode:'成员申请审核模式',question:'入群问题提示',answers:'可接受答案',
+  exactMatch:'答案精确匹配',minLevel:'最低 QQ 等级（0 关闭）',blackUsers:'成员黑名单',whiteUsers:'成员白名单',
+  schemaVersion:'配置结构版本',newsSources:'按机器人与群隔离的新闻来源',legacy:'受保护的迁移信息'
+}
 const limits={rankLimit:[1,50],recallLimit:[1,50],recallWindowMinutes:[1,120],minLevel:[0,200],requestExpireMinutes:[1,60],maxPendingRequests:[1,100],minGroupMember:[1,10000]}
-function field(key,value,prefix=''){
-  const out={path:prefix+key,label:labels[key],type:Array.isArray(value)?'array':typeof value==='number'?'integer':typeof value==='boolean'?'boolean':'string'}
+const idArrays=new Set(['masters','managementGroups','notifyUsers','blackGroups','whiteGroups','blackUsers','whiteUsers'])
+function field(key,value,scope) {
+  const type=Array.isArray(value)?'array':value!==null&&typeof value==='object'?'object':typeof value==='number'?'integer':typeof value
+  const writable=scope==='group'?GROUP_CHAT_FIELDS:GLOBAL_CHAT_FIELDS
+  const out={path:(scope==='group'?'groups.*.':'')+key,label:labels[key]||key,type,scope,chatWritable:writable.has(key),sensitive:false}
   if(limits[key])[out.min,out.max]=limits[key]
   if(key==='inviteMode')out.enum=['off','manual','accept','reject']
   if(key==='joinMode')out.enum=['off','manual','answer','accept','reject']
-  if(['managementGroups','notifyUsers','masters','blackGroups','whiteGroups','blackUsers','whiteUsers','answers'].includes(key))out.description='JSON数组，例如 ["123456789"]'
-  if(key==='groups'){out.itemDefaults=groupDefaults;out.description='每项设置一个群，支持多机器人；默认不启用。'}
-  if(key==='autoQuitEnabled')out.description='开启后仅检查已启用群；管理群、白名单、主人所在群、机器人群主的群豁免。'
-  if(key==='minLevel')out.description='NapCat需要返回真实QQ等级；未知等级转人工审核。'
+  if(idArrays.has(key)){out.items={type:'string',format:'qq-or-group-id'};out.maxItems=5000}
+  if(key==='answers'){out.items={type:'string',minLength:1,maxLength:200};out.maxItems=100}
+  if(['question','welcomeMessage','leaveMessage','autoQuitMessage'].includes(key))out.maxLength=2000
+  if(['dailyTime','autoQuitTime'].includes(key))out.format='HH:mm'
+  if(key==='timezone')out.format='iana-timezone'
+  if(key==='masters'){out.editPolicy='manual-file-only';out.description='只手动编辑 config/local.json；普通命令识别 isMaster 或 masters，自动退群豁免只读 masters。'}
+  if(key==='enabled'){out.editPolicy='dedicated-command-or-manager';out.description='聊天仅通过 #群管开启 / #群管关闭调整。'}
+  if(key==='botId'||key==='groupId')out.editPolicy='identity-not-chat-writable'
+  if(key==='groups'){out.editPolicy='structured-manager';out.maxItems=1000}
+  if(key==='schemaVersion'||key==='legacy'){out.editPolicy='internal';out.hidden=true}
+  if(key==='legacy')out.sensitive=true
+  if(key==='newsSources'){
+    out.editPolicy='browser-only';out.sensitive=true;out.maxItems=1000
+    out.description='浏览器管理界面按精确机器人与群维护；不允许聊天 setter 或通配来源。'
+    out.keyWriteContract={actions:['keep','replace','clear'],defaultAction:'keep',readView:'hasKey only'}
+    out.fields=[
+      {name:'botId',type:'string',format:'qq-id',sensitive:false},
+      {name:'groupId',type:'string',format:'group-id',sensitive:false},
+      {name:'url',type:'string',format:'http-or-https-url',sensitive:true},
+      {name:'key',type:'string',sensitive:true,writeOnly:true},
+      {name:'authType',type:'string',enum:['none','bearer','header','query'],sensitive:false},
+      {name:'authName',type:'string',sensitive:false,description:'header/query 时必须提供合法名称；none/bearer 为空'}
+    ]
+  }
+  if(key==='autoQuitEnabled')out.description='入群事件由全局开关控制；每日巡检只处理已配置并启用的群。'
   return out
 }
-const commandTable=[
-  {title:'群管帮助与版本',command:'#群管帮助 / #群管版本',description:'无游戏依赖的独立群管理；#群卫为别名。',permission:'all',category:'群管理'},
-  {title:'群管发言排行',command:'#群管发言日榜 / #群管昨日榜 / #群管发言月榜',description:'按本群、本机器人与配置时区统计发言和图片。',permission:'all',category:'群管理'},
-  {title:'群管群服务',command:'#群管日报 / #群管赞我',description:'日报需设置API；点赞需在本群开启。',permission:'all',category:'群管理'},
-  {title:'群管设置与名单',command:'#群管状态 / #群管设置 字段 值 / #群管黑名单 添加/删除 QQ / #群管白名单 添加/删除 QQ',description:'群管理权限；开启/关闭需要群主或主人。',permission:'admin',category:'群管理'},
-  {title:'启用群管',command:'#群管开启 / #群管关闭',description:'仅群主或主人；只更改本群。',permission:'owner',category:'群管理'},
-  {title:'群管禁言与踢人',command:'禁言 @成员 [10分钟] / 解禁 @成员 / #群管踢 @成员 / #群管全体禁言 / #群管全体解禁',description:'禁言可省略时长，默认10分钟；支持 #禁言、#群管禁言 和对应解禁旧入口。操作人和机器人均需管理权限，保护群主和管理员。',permission:'admin',category:'群管理'},
-  {title:'群管撤回',command:'#群管撤回（引用） / #群管撤回 @成员 5',description:'只撤回本群；批量受条数和时间限制，准确显示失败数。',permission:'admin',category:'群管理'},
-  {title:'群管管理任免与头衔',command:'#群管设管理 @成员 / #群管撤管理 @成员 / #群管头衔 @成员 头衔',description:'操作人需群主或主人，机器人必须为群主。',permission:'owner',category:'群管理'},
-  {title:'群管审核',command:'#群管待审核 / #群管同意 请求编号 / #群管拒绝 请求编号 / #确认加群 / #拒绝加群',description:'可引用群管审核通知；请求绑定账号和通知群，过期不可操作。',permission:'admin',category:'群管理'},
-  {title:'群管全局设置与维护',command:'#群管全局 字段 值 / #群管群黑名单 添加/删除 群号 / #群管群白名单 添加/删除 群号 / #群管更新 / #群管更新日志 / #群管日志',description:'仅主人私聊。全局设置、源码更新和审计；不覆盖本地源码改动。',permission:'master',category:'群管理'}
-]
-const manifest={schemaVersion:1,title:'GroupGuard-Plugin 群管',description:'独立通用群管理：权限、审核、撤回、统计、通知与定时任务，无游戏依赖。',version:'1.0.1',commands:commandTable.flatMap(x=>x.command.split(' / ')),commandTable,configs:[{id:'groupguard',title:'群管设置',file:'config/local.json',defaults,reload:'hot',fields:[...Object.entries(defaults).map(([k,v])=>field(k,v)),...Object.entries(groupDefaults).map(([k,v])=>field(k,v,'groups.*.'))]}]}
-fs.writeFileSync(new URL('../orangejuice.plugin.json',import.meta.url),JSON.stringify(manifest,null,2)+'\n')
+const syntax={
+  '帮助':'#群管帮助 [文字]','设置':'#群管设置 <字段> <值>','禁言':'#群管禁言 @成员 [时长]','解禁':'#群管解禁 @成员',
+  '踢':'#群管踢 @成员','撤回':'#群管撤回（引用）或 #群管撤回 @成员 [条数]',
+  '黑名单':'#群管黑名单 [添加|删除 <QQ>]','白名单':'#群管白名单 [添加|删除 <QQ>]',
+  '群黑名单':'#群管群黑名单 [添加|删除 <群号>]','群白名单':'#群管群白名单 [添加|删除 <群号>]',
+  '设管理':'#群管设管理 @成员','撤管理':'#群管撤管理 @成员','头衔':'#群管头衔 @成员 <头衔>',
+  '同意':'#群管同意 [请求编号]（也可引用通知）','拒绝':'#群管拒绝 [请求编号]（也可引用通知）',
+  '全局':'#群管全局 <字段> <值>'
+}
+const withoutEnabled=new Set(['帮助','版本','状态','开启','关闭','同意','拒绝','全局','群黑名单','群白名单','更新日志','更新','日志'])
+const commandTable=MAIN_COMMANDS.map(name=>{
+  const metadata=COMMAND_DEFINITIONS.find(row=>row.names.includes(name))
+  return {name,command:syntax[name]||'#群管'+name,aliases:['/群管'+name],permission:metadata.access,contexts:name==='待审核'?['group']:metadata.contexts,requiresEnabled:!withoutEnabled.has(name),description:metadata.description}
+})
+commandTable.push(
+  {name:'赞我',command:'赞我',aliases:[],permission:'all',contexts:['group'],requiresEnabled:true,requiresFeature:'likes',description:'裸词精确匹配；每机器人每天最多调用10次，每次 times:10，跨群共用并持久化。'},
+  {name:'撤回简写',command:'撤回',aliases:[],permission:'admin-or-master',contexts:['group'],requiresEnabled:true,requiresReply:true,description:'仅有效群消息引用，复用正式引用撤回。'},
+  {name:'禁言简写',command:'禁言 @成员 [时长]',aliases:['#禁言','/禁言'],permission:'admin-or-master',contexts:['group'],requiresEnabled:true},
+  {name:'解禁简写',command:'解禁 @成员',aliases:['#解禁','/解禁'],permission:'admin-or-master',contexts:['group'],requiresEnabled:true}
+)
+const manifest={
+  schemaVersion:2,id:'groupguard',title:'GroupGuard-Plugin 群管',version:pkg.version,
+  description:pkg.description,runtime:{framework:'TRSS',adapter:'OneBot v11',provider:'NapCat',entry:'index.js',node:pkg.engines.node,independentHttp:false},
+  permissions:{master:'TRSS isMaster === true 或手动配置的 masters；自动退群主人豁免只读取 masters',enforcement:'core-and-entry'},
+  commands:commandTable.map(row=>row.command),commandTable,
+  configs:[{id:'groupguard',file:'config/local.json',reload:'hot',defaults,fields:[
+    ...Object.entries(defaults).map(([key,value])=>field(key,value,'global')),
+    ...Object.entries(groupDefaults).map(([key,value])=>field(key,value,'group'))
+  ]}],
+  management:{manifestOnly:false,browserStatus:'implemented',serverProvided:true,embeddedIn:'TRSS plugin process',defaultHost:'127.0.0.1',defaultPort:15083,authentication:'password-and-session-csrf',environment:{enabled:'GROUPGUARD_ADMIN_ENABLED',host:'GROUPGUARD_ADMIN_HOST',port:'GROUPGUARD_ADMIN_PORT'},description:'插件内置配置页面；无额外系统服务，不接收OneBot事件；Docker只映射宿主回环地址。'},
+  privacy:{instanceConfigPublished:false,instanceDataPublished:false,secretFields:['newsSources.*.key','newsSources.*.url','legacy']}
+}
+const output=JSON.stringify(manifest,null,2)+'\n'
+const target=new URL('../plugin.manifest.json',import.meta.url)
+if(process.argv.includes('--check')){
+  if(!fs.existsSync(target)||fs.readFileSync(target,'utf8')!==output){console.error('plugin.manifest.json 与命令/配置定义不一致，请运行 npm run manifest');process.exitCode=1}
+}else fs.writeFileSync(target,output)

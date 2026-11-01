@@ -3,53 +3,207 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import http from 'node:http'
-import {spawn} from 'node:child_process'
-import {createHmac} from 'node:crypto'
-import {fileURLToPath} from 'node:url'
-const source=fileURLToPath(new URL('..',import.meta.url))
-const wait=async fn=>{for(let n=0;n<50;n++){if(await fn())return;await new Promise(r=>setTimeout(r,40))}throw new Error('timed out')}
+import {fileURLToPath,pathToFileURL} from 'node:url'
+import {normalize,OneBotAdapter} from '../lib/adapter.mjs'
 
-test('独立服务实测：HMAC、白名单账号、伪造主人拒绝、HTTP API 与帮助路由',async t=>{
-  const root=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-http-')),calls=[]
-  for(const name of ['standalone.mjs','lib','config','CHANGELOG.md','package.json'])fs.cpSync(path.join(source,name),path.join(root,name),{recursive:true})
-  const api=http.createServer(async(req,res)=>{let raw='';for await(const c of req)raw+=c;calls.push({action:req.url.slice(1),params:JSON.parse(raw)});res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'ok',retcode:0,data:{message_id:23}}))})
-  await new Promise(r=>api.listen(0,'127.0.0.1',r))
-  const reservation=http.createServer();await new Promise(r=>reservation.listen(0,'127.0.0.1',r));const port=reservation.address().port;await new Promise(r=>reservation.close(r))
-  fs.writeFileSync(path.join(root,'config/standalone.json'),JSON.stringify({host:'127.0.0.1',port,bots:[{botId:'100000001',apiUrl:`http://127.0.0.1:${api.address().port}`}]}))
-  const child=spawn(process.execPath,[path.join(root,'standalone.mjs')],{env:{...process.env,GROUPGUARD_EVENT_SECRET:'test-secret',GROUPGUARD_API_TOKEN:''},stdio:['ignore','pipe','pipe']})
-  let output='';child.stdout.on('data',x=>output+=x);child.stderr.on('data',x=>output+=x)
-  t.after(async()=>{const ended=new Promise(r=>child.once('exit',r));child.kill();await ended;await new Promise(r=>api.close(r));fs.rmSync(root,{recursive:true,force:true})})
-  const url=`http://127.0.0.1:${port}`
-  await wait(async()=>{try{return (await fetch(url+'/healthz')).ok}catch{return false}})
-  assert.equal((await (await fetch(url+'/healthz')).json()).ok,true)
-  const event={self_id:100000001,user_id:123456789,group_id:200000001,post_type:'message',message:[{type:'text',data:{text:'#群管帮助'}}]}
-  const post=async(e,valid=true)=>{const body=JSON.stringify(e);return fetch(url+'/onebot',{method:'POST',headers:{'X-Signature':valid?'sha1='+createHmac('sha1','test-secret').update(body).digest('hex'):'invalid'},body})}
-  assert.equal((await post(event,false)).status,401);assert.equal((await post({...event,self_id:99999999})).status,403);assert.equal(calls.length,0)
-  assert.equal((await post(event)).status,200);await wait(()=>calls.length>0);assert.equal(calls[0].action,'send_group_msg');assert.match(calls[0].params.message[0].data.text,/群管/)
-  await new Promise(r=>setTimeout(r,1100))
-  assert.equal((await post({...event,group_id:undefined,isMaster:true,message:[{type:'text',data:{text:'#群管全局 inviteMode accept'}}]})).status,200)
-  await wait(()=>calls.length>1);assert.match(calls.at(-1).params.message[0].data.text,/主人权限/);assert.equal(JSON.parse(fs.readFileSync(path.join(root,'config/local.json'))).inviteMode,'off')
-  assert.equal(output.includes('已启动'),true)
+const source=fileURLToPath(new URL('..',import.meta.url))
+const BOT='100000001',GROUP='200000001',ACTOR='345678901',MASTER='123456789',TARGET='456789012'
+async function fixture(t,{enabled=true}={}) {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-trss-'))
+  fs.mkdirSync(path.join(root,'config'))
+  for(const name of ['lib','resources'])fs.cpSync(path.join(source,name),path.join(root,name),{recursive:true})
+  for(const name of ['index.js','package.json','CHANGELOG.md'])fs.copyFileSync(path.join(source,name),path.join(root,name))
+  fs.copyFileSync(path.join(source,'config/default.json'),path.join(root,'config/default.json'))
+  const previousPlugin=globalThis.plugin
+  globalThis.plugin=class PluginBase {constructor(options){Object.assign(this,options)}}
+  const entry=await import(pathToFileURL(path.join(root,'index.js')).href)
+  t.after(()=>{
+    entry.engine.close()
+    if(previousPlugin===undefined)delete globalThis.plugin;else globalThis.plugin=previousPlugin
+    fs.rmSync(root,{recursive:true,force:true})
+  })
+  let clock=Date.parse('2026-11-01T04:00:00Z'),sequence=0
+  entry.engine.now=()=>clock
+  entry.engine.config.setGroup(BOT,GROUP,g=>{g.enabled=enabled})
+  const roles={[BOT]:'admin',[ACTOR]:'admin',[MASTER]:'member',[TARGET]:'member'}
+  const calls=[],failures=new Map()
+  const bot={uin:Number(BOT),beforeAction:null,async sendApi(action,params){
+    calls.push({action,params:structuredClone(params)})
+    if(bot.beforeAction)await bot.beforeAction(action,params)
+    if(failures.has(action))return {status:'failed',retcode:100,message:failures.get(action)}
+    let data={message_id:9000+calls.length}
+    if(action==='get_group_member_info')data={user_id:params.user_id,role:roles[String(params.user_id)]||'member',nickname:'synthetic'}
+    if(action==='get_msg')data={message_id:params.message_id,group_id:Number(GROUP),user_id:Number(TARGET),sender:{user_id:Number(TARGET),role:'member'}}
+    if(action==='get_group_member_list')data=Object.entries(roles).map(([user_id,role])=>({user_id:Number(user_id),role}))
+    return {status:'ok',retcode:0,data}
+  }}
+  const event=(msg,options={})=>{
+    clock+=2000
+    return {self_id:Number(BOT),group_id:Number(GROUP),user_id:Number(ACTOR),message_id:++sequence,msg,message:[{type:'text',data:{text:msg}}],isMaster:false,bot,...options}
+  }
+  return {root,entry,p:new entry.GroupGuardCommands(),roles,calls,failures,bot,event,advance:ms=>{clock+=ms}}
+}
+// Exercise the real exported entry with the framework's accept/rule ordering,
+// including its optional permission filter. Core permissions still execute.
+async function route(plugin,event) {
+  plugin.e=event
+  const accepted=await plugin.accept(event)
+  if(accepted)return accepted
+  for(const rule of plugin.rule||[]){
+    if(rule.permission==='master'&&event.isMaster!==true)continue
+    if(rule.reg.test(event.msg)&&await plugin[rule.fnc](event))return true
+  }
+  return false
+}
+const sent=calls=>calls.filter(call=>['send_group_msg','send_private_msg'].includes(call.action))
+const textOf=call=>(call?.params.message||[]).filter(segment=>segment.type==='text').map(segment=>segment.data.text).join('')
+
+test('实际入口启动并关闭嵌入管理页面，不修改群配置或接收OneBot事件',async t=>{
+  const f=await fixture(t),before=fs.readFileSync(path.join(f.root,'config/local.json'),'utf8')
+  const old=process.env.GROUPGUARD_ADMIN_PORT
+  process.env.GROUPGUARD_ADMIN_PORT='0'
+  try{
+    const admin=await f.entry.startAdmin()
+    assert.equal(await f.entry.startAdmin(),admin)
+    const base='http://127.0.0.1:'+admin.address.port
+    const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/GroupGuard/)
+    const session=await fetch(base+'/api/session');assert.deepEqual(await session.json(),{authenticated:false})
+    assert.equal((await fetch(base+'/api/config')).status,401)
+    assert.equal(fs.readFileSync(path.join(f.root,'config/local.json'),'utf8'),before)
+    assert.equal(f.calls.length,0)
+    await admin.close()
+  }finally{if(old===undefined)delete process.env.GROUPGUARD_ADMIN_PORT;else process.env.GROUPGUARD_ADMIN_PORT=old}
 })
 
-test('分发规则覆盖帮助、群操作、兼容审核，OrangeJuice 文档没有暴露主人指令',async t=>{
-  const temporary=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-yunzai-'))
-  fs.mkdirSync(path.join(temporary,'GroupGuard-Plugin'))
-  for(const name of ['lib','config','index.js','package.json','orangejuice.plugin.json'])fs.cpSync(path.join(source,name),path.join(temporary,'GroupGuard-Plugin',name),{recursive:true})
-  globalThis.plugin=class {constructor(options){Object.assign(this,options)}}
-  const entry=await import(new URL('file:///'+path.join(temporary,'GroupGuard-Plugin/index.js').replaceAll('\\','/')))
-  t.after(()=>{entry.engine.close();delete globalThis.plugin;fs.rmSync(temporary,{recursive:true,force:true})})
-  const p=new entry.GroupGuardCommands()
-  for(const cmd of ['禁言','禁言 10分钟','#禁言 123456789 10分钟','解禁','#群管帮助','#群管帮助 文字','/群卫帮助 文字','#群管设置 likes 开','#群管禁言 123456789 10分钟','#群管全局 inviteMode manual','#确认加群'])assert.equal(p.rule.some(r=>r.reg.test(cmd)),true,cmd)
-  for(const cmd of ['#群管帮助文字','#群管帮助 /private/path.jpg','#群管版本 文字'])assert.equal(p.rule.some(r=>r.reg.test(cmd)),false,cmd)
-  if(!fs.existsSync(path.join(source,'../OrangeJuice-Plugin/integrations/yunzai/command-table.mjs'))){t.diagnostic('独立仓库未附带 OrangeJuice，跳过外部指令表集成断言');return}
-  const {buildCommandTable}=await import('../../OrangeJuice-Plugin/integrations/yunzai/command-table.mjs')
-  const loader={priority:[{key:'GroupGuard-Plugin/index.js',plugin:p}]}
-  const table=buildCommandTable(loader,{isGroup:true,group_id:'200000001'},{pluginsRoot:temporary})
-  assert.equal(table.rows.filter(x=>x.directory==='GroupGuard-Plugin').length,9)
-  assert.equal(table.rows.some(x=>x.permission==='master'),false)
-  assert.equal(table.unparsed,0)
-  const full=buildCommandTable(loader,{isMaster:true},{pluginsRoot:temporary})
-  assert.equal(full.rows.filter(x=>x.directory==='GroupGuard-Plugin').length,10)
+test('TRSS 实际入口保持 apps 导出，禁用群可查公开帮助，取消入口不执行',async t=>{
+  const f=await fixture(t,{enabled:false})
+  assert.deepEqual(Object.keys(f.entry.apps).sort(),['GroupGuardCommands','GroupGuardDecrease','GroupGuardIncrease','GroupGuardInvite','GroupGuardJoin'])
+  assert.equal(f.p.rule.some(rule=>rule.permission==='master'),false)
+  assert.equal(await route(f.p,f.event('/群管帮助 文字')),true)
+  assert.match(textOf(sent(f.calls).at(-1)),/群管/)
+  assert.equal(await route(f.p,f.event('#群管版本')),true)
+  assert.match(textOf(sent(f.calls).at(-1)),/2\.0\.0/)
+  const before=f.calls.length
+  for(const cmd of ['#群管','/群管','#群卫帮助','＃群管帮助','／群管版本','#确认加群','#拒绝加群','#群管发言日榜','#群管发言月榜','#群管赞我','#赞我','撤回','快来赞我'])assert.equal(await route(f.p,f.event(cmd)),false,cmd)
+  assert.equal(f.calls.length,before)
+})
+
+test('主人私聊穿过 TRSS 路由：插件 masters 与框架主人均可，普通用户及群聊不可',async t=>{
+  const f=await fixture(t)
+  f.entry.engine.config.update(c=>{c.masters=[MASTER]})
+  assert.equal(await route(f.p,f.event('#群管全局 inviteMode manual',{group_id:'',user_id:Number(MASTER)})),true)
+  assert.equal(f.entry.engine.config.read().inviteMode,'manual')
+  assert.match(textOf(sent(f.calls).at(-1)),/保存/)
+  await route(f.p,f.event('/群管全局 notifyInviter 开',{group_id:'',isMaster:true}))
+  assert.equal(f.entry.engine.config.read().notifyInviter,true)
+  await route(f.p,f.event('#群管全局 inviteMode reject',{group_id:''}))
+  assert.equal(f.entry.engine.config.read().inviteMode,'manual')
+  assert.match(textOf(sent(f.calls).at(-1)),/主人/)
+  await route(f.p,f.event('#群管全局 inviteMode reject',{user_id:Number(MASTER)}))
+  assert.equal(f.entry.engine.config.read().inviteMode,'manual')
+  assert.match(textOf(sent(f.calls).at(-1)),/私聊/)
+  await route(f.p,f.event('#群管全局 masters []',{group_id:'',user_id:Number(MASTER)}))
+  assert.deepEqual(f.entry.engine.config.read().masters,[MASTER])
+})
+
+test('真实 OneBot 适配与核心权限：普通成员/机器人权限拒绝，平台失败不得报成功',async t=>{
+  const f=await fixture(t)
+  f.roles[ACTOR]='member'
+  await route(f.p,f.event('禁言 '+TARGET+' 10分钟'))
+  assert.equal(f.calls.some(call=>call.action==='set_group_ban'),false)
+  f.roles[ACTOR]='admin';f.roles[BOT]='member'
+  await route(f.p,f.event('/禁言 '+TARGET+' 10分钟'))
+  assert.equal(f.calls.some(call=>call.action==='set_group_ban'),false)
+  f.roles[BOT]='admin'
+  await route(f.p,f.event('#群管禁言 '+TARGET+' 10分钟'))
+  assert.deepEqual(f.calls.find(call=>call.action==='set_group_ban').params,{group_id:Number(GROUP),user_id:Number(TARGET),duration:600})
+  assert.match(textOf(sent(f.calls).at(-1)),/成功/)
+  f.failures.set('set_group_ban','模拟平台拒绝')
+  await route(f.p,f.event('解禁 '+TARGET))
+  assert.match(textOf(sent(f.calls).at(-1)),/模拟平台拒绝/)
+  assert.doesNotMatch(textOf(sent(f.calls).at(-1)),/成功/)
+})
+
+test('accept、规则回调及复制事件共用同次结果，首轮超过冷却仍只执行一次',async t=>{
+  const f=await fixture(t)
+  let release,started
+  const gate=new Promise(resolve=>{release=resolve}),entered=new Promise(resolve=>{started=resolve})
+  f.bot.beforeAction=async action=>{if(action==='set_group_ban'){started();await gate}}
+  let handled=0
+  const original=f.entry.engine.handle.bind(f.entry.engine)
+  f.entry.engine.handle=(...args)=>{handled++;return original(...args)}
+  const e=f.event('禁言 '+TARGET+' 10分钟')
+  const first=f.p.accept(e)
+  await entered
+  f.advance(2500)
+  const second=f.p.dispatchCommand({...e})
+  release()
+  assert.deepEqual(await Promise.all([first,second]),[true,true])
+  f.advance(2500)
+  assert.equal(await f.p.adminCommand({...e}),true)
+  assert.equal(handled,1)
+  assert.equal(f.calls.filter(call=>call.action==='set_group_ban').length,1)
+  const state=f.entry.engine.state.groups[BOT+':'+GROUP]
+  assert.equal(state.history.filter(row=>String(row.id)===String(e.message_id)).length,1)
+  assert.equal(Object.values(state.days).reduce((sum,table)=>sum+(table[ACTOR]?.count||0),0),1)
+})
+
+test('群引用裸撤回复用平台同群校验，source 引用保留；无引用与私聊不触发',async t=>{
+  const f=await fixture(t)
+  const quoted=f.event('撤回',{message:[{type:'reply',data:{id:77}},{type:'text',data:{text:'撤回'}}]})
+  assert.equal(await route(f.p,quoted),true)
+  assert.equal(f.calls.some(call=>call.action==='get_msg'&&Number(call.params.message_id)===77),true)
+  assert.equal(f.calls.some(call=>call.action==='delete_msg'&&Number(call.params.message_id)===77),true)
+  assert.equal(normalize(f.event('撤回',{source:{message_id:78}})).replyId,'78')
+  const count=f.calls.filter(call=>call.action==='delete_msg').length
+  assert.equal(await route(f.p,f.event('撤回')),false)
+  assert.equal(await route(f.p,f.event('撤回',{group_id:'',source:{message_id:78}})),false)
+  assert.equal(f.calls.filter(call=>call.action==='delete_msg').length,count)
+})
+
+test('群申请和成员事件保留正确框架事件与 OneBot 适配，工具不进入 apps 构造扫描',async t=>{
+  const f=await fixture(t)
+  const received=[]
+  f.entry.engine.handle=async (raw,adapter)=>{received.push({raw,adapter});return false}
+  const definitions=[
+    ['GroupGuardInvite','request.group.invite','request','invite'],
+    ['GroupGuardJoin','request.group.add','request','add'],
+    ['GroupGuardIncrease','notice.group.increase','notice','group_increase'],
+    ['GroupGuardDecrease','notice.group.decrease','notice','group_decrease']
+  ]
+  for(const [name,event,postType,subtype] of definitions){
+    const plugin=new f.entry.apps[name]()
+    assert.equal(plugin.event,event)
+    await plugin.accept(f.event(''))
+    const last=received.at(-1)
+    assert.equal(last.raw.post_type,postType)
+    assert.equal(postType==='request'?last.raw.sub_type:last.raw.notice_type,subtype)
+    assert.equal(last.adapter instanceof Object,true)
+    assert.equal(typeof last.adapter.api,'function')
+  }
+  assert.equal(f.entry.adapterFor(f.bot),f.entry.adapterFor(f.bot))
+  assert.throws(()=>f.entry.adapterFor({}),/sendApi/)
+  await assert.rejects(new OneBotAdapter(async()=>({data:{}})).api('fake'),/缺少成功状态/)
+  await assert.rejects(new OneBotAdapter(async()=>({status:'failed',retcode:2,message:'失败'})).api('fake'),/失败/)
+})
+
+test('独立声明覆盖全部最终指令与敏感新闻字段，不泄露默认实例数据',()=>{
+  const manifest=JSON.parse(fs.readFileSync(path.join(source,'plugin.manifest.json'),'utf8'))
+  assert.equal(manifest.version,'2.0.0')
+  assert.equal(manifest.runtime.independentHttp,false)
+  assert.equal(manifest.management.browserStatus,'implemented')
+  assert.equal(manifest.management.serverProvided,true)
+  assert.equal(manifest.management.defaultHost,'127.0.0.1')
+  assert.equal(manifest.management.defaultPort,15083)
+  assert.deepEqual(manifest.configs[0].defaults.masters,[])
+  assert.deepEqual(manifest.configs[0].defaults.newsSources,[])
+  const fields=manifest.configs[0].fields
+  assert.equal(fields.find(field=>field.path==='masters').chatWritable,false)
+  const news=fields.find(field=>field.path==='newsSources')
+  assert.equal(news.chatWritable,false)
+  assert.equal(news.fields.find(field=>field.name==='key').sensitive,true)
+  const names=manifest.commandTable.map(command=>command.name)
+  for(const name of ['帮助','今日榜','昨日榜','月榜','日报','赞我','全局','更新'])assert.equal(names.includes(name),true,name)
+  assert.equal(manifest.commandTable.find(command=>command.name==='赞我').command,'赞我')
+  assert.equal(manifest.commandTable.some(command=>command.command==='#群管赞我'),false)
 })

@@ -1,37 +1,95 @@
 import {fileURLToPath} from 'node:url'
-import {GroupGuard,commandMessage} from './lib/core.mjs'
+import {GroupGuard} from './lib/core.mjs'
 import {OneBotAdapter} from './lib/adapter.mjs'
 import {createHelpImages} from './lib/help-images.mjs'
+import {commandRules} from './lib/command.mjs'
+import {createAdminServer} from './lib/admin.mjs'
+
 const PluginBase=globalThis.plugin||(await import('../../lib/plugins/plugin.js')).default
 const root=fileURLToPath(new URL('.',import.meta.url))
-export const engine=new GroupGuard(root,{helpImages:createHelpImages({root}),onError:error=>globalThis.logger?.warn('[GroupGuard] '+(error.message||error))})
+export const engine=new GroupGuard(root,{helpImages:createHelpImages({root}),onError:error=>globalThis.logger?.warn('[GroupGuard] '+(error?.message||error))})
 const adapters=new WeakMap()
-export function adapterFor(bot){let a=adapters.get(bot);if(!a){if(typeof bot?.sendApi!=='function')throw new Error('群管需要支持 sendApi 的 OneBot v11 机器人');a=new OneBotAdapter((action,params)=>bot.sendApi(action,params));adapters.set(bot,a)}return a}
-function registerOnline(){
-  const bots=globalThis.Bot?.bots?Object.values(Bot.bots):[]
+let adminPromise
+export function startAdmin(){
+  if(process.env.GROUPGUARD_ADMIN_ENABLED==='0')return Promise.resolve(null)
+  if(!adminPromise){
+    adminPromise=createAdminServer({root,store:engine.config,engine,host:process.env.GROUPGUARD_ADMIN_HOST||'127.0.0.1',port:Number(process.env.GROUPGUARD_ADMIN_PORT||15083),onError:error=>globalThis.logger?.warn('[GroupGuard 管理] '+(error?.message||error))})
+    adminPromise.then(admin=>globalThis.logger?.info('[GroupGuard] 配置界面已启动，端口 '+admin.address.port+'；初始密码见插件 data/admin-initial-password.txt。')).catch(()=>{adminPromise=null})
+  }
+  return adminPromise
+}
+const closeEngine=engine.close.bind(engine)
+engine.close=()=>{closeEngine();if(adminPromise)adminPromise.then(admin=>admin?.close()).catch(()=>{});if(globalThis.groupGuardRegisterTimer){clearInterval(globalThis.groupGuardRegisterTimer);delete globalThis.groupGuardRegisterTimer}}
+export function adapterFor(bot) {
+  let adapter=adapters.get(bot)
+  if(!adapter){
+    if(typeof bot?.sendApi!=='function')throw new Error('群管需要支持 sendApi 的 OneBot v11 机器人')
+    adapter=new OneBotAdapter((action,params)=>bot.sendApi(action,params))
+    adapters.set(bot,adapter)
+  }
+  return adapter
+}
+
+function registerOnline() {
+  const bots=globalThis.Bot?.bots?Object.values(globalThis.Bot.bots):[]
   for(const bot of bots)if(bot&&typeof bot.sendApi==='function'&&(bot.uin||bot.self_id))engine.register(String(bot.uin||bot.self_id),adapterFor(bot))
 }
-export class GroupGuardCommands extends PluginBase {
-  constructor(){super({name:'GroupGuard-Plugin 群管',dsc:'独立群管理、审核、发言榜与定时任务',event:'message',priority:-9000,rule:[
-    {reg:/^[#/＃](?:群管|群卫)(?:帮助(?:\s+文字)?|版本|发言日榜|昨日榜|发言月榜|日报|赞我)?\s*$/,fnc:'publicCommand',title:'群管帮助与群服务',description:'#群管帮助 / #群管帮助 文字 / #群管发言日榜 / #群管昨日榜 / #群管发言月榜 / #群管日报 / #群管赞我'},
-    {reg:/^[#/＃]?(?:禁言|解禁)(?:\s.*)?$/,fnc:'adminCommand',title:'群管禁言与解禁',description:'禁言 @成员 [10分钟] / 解禁 @成员；默认禁言10分钟，需要操作人与机器人群管理权限'},
-    {reg:/^[#/＃](?:群管|群卫)(?:状态|开启|关闭|设置|黑名单|白名单|禁言|解禁|踢|全体禁言|全体解禁|撤回|设管理|撤管理|头衔|待审核|同意|拒绝)(?:\s.*)?$/,fnc:'adminCommand',title:'群管群管理',description:'#群管开启 / #群管状态 / 禁言 @成员 10分钟 / #群管撤回 @成员 5；以 #群管帮助 为准'},
-    {reg:/^[#/＃](?:群管|群卫)(?:全局|群黑名单|群白名单|更新日志|更新|日志)(?:\s.*)?$/,fnc:'masterCommand',permission:'master',title:'群管全局设置与维护',description:'仅主人私聊：#群管全局 字段 值 / #群管群黑名单 添加 群号 / #群管更新 / #群管日志'},
-    {reg:/^#(?:确认加群|拒绝加群)$/,fnc:'adminCommand',title:'群管引用审核',description:'引用群管发出的申请通知：#确认加群 / #拒绝加群'}
-  ]})}
-  init(){registerOnline();engine.start();if(globalThis.groupGuardRegisterTimer)clearInterval(globalThis.groupGuardRegisterTimer);globalThis.groupGuardRegisterTimer=setInterval(registerOnline,15000);globalThis.groupGuardRegisterTimer.unref()}
-  async accept(e){e=e||this.e;if(!/^[#/＃](?:群管|群卫)|^#(?:确认加群|拒绝加群)$/.test(commandMessage(e.msg)))await engine.handle({...e,post_type:'message'},adapterFor(e.bot));return false}
-  publicCommand(e){return engine.handle({...e,post_type:'message'},adapterFor(e.bot))}
-  adminCommand(e){return engine.handle({...e,post_type:'message'},adapterFor(e.bot))}
-  masterCommand(e){return engine.handle({...e,post_type:'message'},adapterFor(e.bot))}
+
+// accept() and a rule callback can see the same event in different TRSS loaders.
+// Share the in-flight/result promise, including when the first call exceeds cooldown.
+const eventObjects=new WeakMap(),messageResults=new Map()
+function messageKey(event) {
+  if(event.message_id===undefined||event.message_id===null||event.message_id==='')return ''
+  return [event.self_id||event.bot?.uin||event.bot?.self_id||'',event.group_id||'private',event.user_id||'',event.message_id].join(':')
 }
+function dispatchOnce(event) {
+  if(!event||typeof event!=='object')return Promise.resolve(false)
+  if(eventObjects.has(event))return eventObjects.get(event)
+  const key=messageKey(event),now=Date.now()
+  for(const [id,result] of messageResults)if(now-result.created>120*60000)messageResults.delete(id)
+  if(key&&messageResults.has(key)){
+    const promise=messageResults.get(key).promise
+    eventObjects.set(event,promise)
+    return promise
+  }
+  const promise=Promise.resolve().then(()=>engine.handle({...event,post_type:'message'},adapterFor(event.bot)))
+  eventObjects.set(event,promise)
+  if(key){
+    messageResults.set(key,{created:now,promise})
+    while(messageResults.size>5000)messageResults.delete(messageResults.keys().next().value)
+  }
+  return promise
+}
+
+export class GroupGuardCommands extends PluginBase {
+  constructor(){
+    // A framework master filter would wrongly reject plugin-only masters.
+    super({name:'GroupGuard-Plugin 群管',dsc:'独立群管理、审核与群内辅助功能',event:'message',priority:-9000,rule:commandRules()})
+  }
+  init(){
+    registerOnline();engine.start()
+    startAdmin().catch(error=>globalThis.logger?.warn('[GroupGuard] 配置界面启动失败：'+(error?.message||error)))
+    if(globalThis.groupGuardRegisterTimer)clearInterval(globalThis.groupGuardRegisterTimer)
+    globalThis.groupGuardRegisterTimer=setInterval(registerOnline,15000)
+    globalThis.groupGuardRegisterTimer.unref()
+  }
+  accept(event){return dispatchOnce(event||this.e)}
+  dispatchCommand(event){return dispatchOnce(event||this.e)}
+  publicCommand(event){return this.dispatchCommand(event)}
+  adminCommand(event){return this.dispatchCommand(event)}
+  masterCommand(event){return this.dispatchCommand(event)}
+}
+
 class GroupGuardEvent extends PluginBase {
-  constructor(event,type,subtype){super({name:'群管 '+event,dsc:'独立审核与通知处理',event,priority:-9000});this.type=type;this.subtype=subtype}
-  accept(e){e=e||this.e;return engine.handle({...e,post_type:this.type,request_type:'group',...(this.type==='notice'?{notice_type:'group_'+this.subtype}:{sub_type:this.subtype})},adapterFor(e.bot))}
+  constructor(event,type,subtype){super({name:'群管 '+event,dsc:'审核与成员通知',event,priority:-9000});this.type=type;this.subtype=subtype}
+  accept(event){
+    const raw=event||this.e
+    return engine.handle({...raw,post_type:this.type,request_type:'group',...(this.type==='notice'?{notice_type:'group_'+this.subtype}:{sub_type:this.subtype})},adapterFor(raw.bot))
+  }
 }
 export class GroupGuardInvite extends GroupGuardEvent {constructor(){super('request.group.invite','request','invite')}}
 export class GroupGuardJoin extends GroupGuardEvent {constructor(){super('request.group.add','request','add')}}
 export class GroupGuardIncrease extends GroupGuardEvent {constructor(){super('notice.group.increase','notice','increase')}}
 export class GroupGuardDecrease extends GroupGuardEvent {constructor(){super('notice.group.decrease','notice','decrease')}}
-// TRSS loads module.apps when present. Keep utilities out of its constructor scan.
+// TRSS loads module.apps. Utilities are intentionally excluded from constructor scan.
 export const apps={GroupGuardCommands,GroupGuardInvite,GroupGuardJoin,GroupGuardIncrease,GroupGuardDecrease}
