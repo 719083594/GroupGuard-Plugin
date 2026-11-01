@@ -44,7 +44,31 @@ git clone https://github.com/719083594/GroupGuard-Plugin.git plugins/GroupGuard-
 ssh -N -L 36083:127.0.0.1:15083 用户@服务器
 ```
 
-随后浏览器访问 `http://127.0.0.1:36083`。Docker 如需发布此端口，在容器设置 `GROUPGUARD_ADMIN_HOST=0.0.0.0`，宿主映射使用 `127.0.0.1:15083:15083`；通过本机或 SSH 隧道访问，不公开暴露管理端口。改变监听环境变量后重启机器人。
+随后浏览器访问 `http://127.0.0.1:36083`。通过本机或 SSH 隧道访问，不公开暴露管理端口。
+
+### Docker 用户如何应用管理端口
+
+将下面的环境变量和端口**合并到现有 Yunzai 服务**，保留原来的其他字段；`yunzai` 应替换为自己 `services` 下实际的服务名：
+
+```yaml
+services:
+  yunzai:
+    environment:
+      GROUPGUARD_ADMIN_HOST: "0.0.0.0"
+      GROUPGUARD_ADMIN_PORT: "15083"
+    ports:
+      - "127.0.0.1:15083:15083"
+```
+
+在 `compose.yaml` 所在目录执行：
+
+```sh
+docker compose up -d --no-deps --no-build --pull never yunzai
+```
+
+Compose 会使用已有镜像重新创建 Yunzai 容器，让新增端口和环境变量生效。框架源码、配置和数据仍保存在原来的宿主机挂载目录；这里不重编译框架，也不重建 NapCat、Redis 等其他服务。期间 Yunzai 会短暂停止回复。
+
+只更新插件文件、没有修改 Docker 端口或环境变量时，按原来的方式重启 Yunzai 即可。**非 Docker 安装直接重启机器人**，无需执行上述 Compose 命令。
 
 ## 升级到 2.0.0：不兼容变更
 
