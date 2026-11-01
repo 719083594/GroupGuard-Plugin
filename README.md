@@ -186,6 +186,6 @@ npm run check:manifest
 
 `npm test` 通过 `scripts/test.mjs` 显式枚举 `tests/*.test.mjs`，不递归扫描临时副本或备份，并兼容 Windows 与 Node 20。测试采用合成账号、模拟 OneBot/时钟、隔离 Git 仓库和临时本机管理服务，不向真实群执行平台操作。`tests/integration.test.mjs` 实际导入 TRSS 入口，以 PluginBase 路由模拟验证接入；`tests/admin.test.mjs` 检查管理 HTTP/API，`tests/admin-ui.test.mjs` 检查表单、强制改密、Key 操作、版本冲突与配置对象隔离。它们不能代替真实 TRSS/NapCat、浏览器页面、新闻鉴权和 QQ 收图的对应联调；实际执行结果见 [验证范围](docs/VERIFICATION.md)。
 
-`plugin.manifest.json` 是独立插件声明，包含完整命令、权限上下文、配置字段和敏感标志，由管理程序主动读取；不包含实例秘密，不依赖另外安装统计/新闻/点赞插件。修改命令或默认配置后运行声明生成与一致性检查。核心 Node 20/22/24 的自动检查与实际 TRSS 运行环境分别判断。
+`plugin.manifest.json` 是独立插件声明，包含完整命令、权限上下文、配置字段和敏感标志，由管理程序主动读取；不包含实例秘密，不依赖另外安装统计/新闻/点赞插件。修改命令或默认配置后运行声明生成与一致性检查。发布 CI 固定检查 Node 20/22/24/26 × Linux/Windows，八项均通过后再发布；实际 TRSS 运行环境另行验收。
 
 功能目标见本地重构规格；来源说明保留在 [NOTICE.md](NOTICE.md)。发布只包含源码、默认配置、声明、帮助模板及成图和必要测试，不包含实例配置、运行状态或私有验证材料。
