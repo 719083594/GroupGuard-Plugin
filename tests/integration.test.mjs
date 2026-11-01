@@ -8,6 +8,7 @@ import {spawnSync} from 'node:child_process'
 import {normalize,OneBotAdapter} from '../lib/adapter.mjs'
 
 const source=fileURLToPath(new URL('..',import.meta.url))
+const packageVersion=JSON.parse(fs.readFileSync(path.join(source,'package.json'),'utf8')).version
 const BOT='100000001',GROUP='200000001',ACTOR='345678901',MASTER='123456789',TARGET='456789012'
 async function fixture(t,{enabled=true}={}) {
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-trss-'))
@@ -99,7 +100,7 @@ test('TRSS 实际入口保持 apps 导出，禁用群可查公开帮助，取消
   assert.equal(await route(f.p,f.event('/群管帮助 文字')),true)
   assert.match(textOf(sent(f.calls).at(-1)),/群管/)
   assert.equal(await route(f.p,f.event('#群管版本')),true)
-  assert.match(textOf(sent(f.calls).at(-1)),/2\.0\.0/)
+  assert.ok(textOf(sent(f.calls).at(-1)).includes('群管 '+packageVersion))
   const before=f.calls.length
   for(const cmd of ['#群管','/群管','#群卫帮助','＃群管帮助','／群管版本','#确认加群','#拒绝加群','#群管发言日榜','#群管发言月榜','#群管赞我','#赞我','撤回','快来赞我'])assert.equal(await route(f.p,f.event(cmd)),false,cmd)
   assert.equal(f.calls.length,before)
@@ -206,7 +207,7 @@ test('群申请和成员事件保留正确框架事件与 OneBot 适配，工具
 
 test('独立声明覆盖全部最终指令与敏感新闻字段，不泄露默认实例数据',()=>{
   const manifest=JSON.parse(fs.readFileSync(path.join(source,'plugin.manifest.json'),'utf8'))
-  assert.equal(manifest.version,'2.0.0')
+  assert.equal(manifest.version,packageVersion)
   assert.equal(manifest.runtime.independentHttp,false)
   assert.equal(manifest.management.browserStatus,'implemented')
   assert.equal(manifest.management.serverProvided,true)

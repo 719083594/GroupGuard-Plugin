@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "groupguard",
   "title": "GroupGuard-Plugin 群管",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "独立 TRSS＋NapCat 群管理插件：成员权限、审核、撤回、统计、新闻、点赞与浏览器配置",
   "runtime": {
     "framework": "TRSS",
@@ -19,7 +19,7 @@
   "commands": [
     "#群管帮助 [文字]",
     "#群管版本",
-    "#群管状态",
+    "#群管状态 [文字]",
     "#群管开启",
     "#群管关闭",
     "#群管设置 <字段> <值>",
@@ -83,7 +83,7 @@
     },
     {
       "name": "状态",
-      "command": "#群管状态",
+      "command": "#群管状态 [文字]",
       "aliases": [
         "/群管状态"
       ],
@@ -92,7 +92,7 @@
         "group"
       ],
       "requiresEnabled": false,
-      "description": "#群管状态 / #群管设置 字段 值 / #群管黑名单 / #群管白名单"
+      "description": "#群管状态（默认图片，可加 文字）/ #群管设置 字段 值 / #群管黑名单 / #群管白名单"
     },
     {
       "name": "开启",
@@ -131,7 +131,7 @@
         "group"
       ],
       "requiresEnabled": true,
-      "description": "#群管状态 / #群管设置 字段 值 / #群管黑名单 / #群管白名单"
+      "description": "#群管状态（默认图片，可加 文字）/ #群管设置 字段 值 / #群管黑名单 / #群管白名单"
     },
     {
       "name": "黑名单",
@@ -144,7 +144,7 @@
         "group"
       ],
       "requiresEnabled": true,
-      "description": "#群管状态 / #群管设置 字段 值 / #群管黑名单 / #群管白名单"
+      "description": "#群管状态（默认图片，可加 文字）/ #群管设置 字段 值 / #群管黑名单 / #群管白名单"
     },
     {
       "name": "白名单",
@@ -157,7 +157,7 @@
         "group"
       ],
       "requiresEnabled": true,
-      "description": "#群管状态 / #群管设置 字段 值 / #群管黑名单 / #群管白名单"
+      "description": "#群管状态（默认图片，可加 文字）/ #群管设置 字段 值 / #群管黑名单 / #群管白名单"
     },
     {
       "name": "禁言",

@@ -5,15 +5,15 @@
     "groupguard-public": [
       {
         "file": "resources/help/groupguard-public-1.jpg",
-        "sha256": "fe418bfa84ab40e4b7a5971348b9cd918d3b85284463deb6381d3faf3d397800",
+        "sha256": "90fd045b7033bd619c1843a6400101ce2bb0b043ba68c7f14d202765734da217",
         "width": 1080,
-        "height": 3554
+        "height": 3706
       }
     ],
     "groupguard-master": [
       {
         "file": "resources/help/groupguard-master-1.jpg",
-        "sha256": "6eaa9453abc772437f7d70e6850747f28883b9d1959f36389d25ecaac22395a4",
+        "sha256": "6099ef6767fb8b0ca7f5fdbf96af4325328eb9fa8f4c1e8d61e9e794b326fa4b",
         "width": 1080,
         "height": 1912
       }
@@ -22,7 +22,7 @@
   "sources": [
     {
       "file": "lib/help-content.mjs",
-      "sha256": "726a60463d0108b0e957468fb926f884a4e0f5178f64ad44af0b5666a98bc2f5"
+      "sha256": "83b942cdab930a94e91e762f7e9d5ba9917279de9480d6fc24a3a7d97372cf8c"
     },
     {
       "file": "resources/help-template.html",

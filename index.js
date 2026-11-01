@@ -4,10 +4,21 @@ import {OneBotAdapter} from './lib/adapter.mjs'
 import {createHelpImages} from './lib/help-images.mjs'
 import {commandRules} from './lib/command.mjs'
 import {createAdminServer} from './lib/admin.mjs'
+import {createStatusImageRenderer} from './lib/status-image.mjs'
+import {attachShutdown} from './lib/lifecycle.mjs'
 
 const PluginBase=globalThis.plugin||(await import('../../lib/plugins/plugin.js')).default
 const root=fileURLToPath(new URL('.',import.meta.url))
-export const engine=new GroupGuard(root,{helpImages:createHelpImages({root}),onError:error=>globalThis.logger?.warn('[GroupGuard] '+(error?.message||error))})
+const statusImage=createStatusImageRenderer({
+  tplFile:fileURLToPath(new URL('./resources/status.html',import.meta.url)),
+  render:async(name,data)=>{
+    // TRSS is only known in this entry point, and only loaded for an image request.
+    const {default:renderer}=await import('../../lib/renderer/loader.js')
+    if(typeof renderer?.render!=='function')throw new Error('STATUS_RENDERER_UNAVAILABLE')
+    return renderer.render(name,data)
+  }
+})
+export const engine=new GroupGuard(root,{helpImages:createHelpImages({root}),statusImage,onError:error=>globalThis.logger?.warn('[GroupGuard] '+(error?.message||error))})
 const adapters=new WeakMap()
 let adminPromise
 export function startAdmin(){
@@ -19,7 +30,15 @@ export function startAdmin(){
   return adminPromise
 }
 const closeEngine=engine.close.bind(engine)
-engine.close=()=>{closeEngine();if(adminPromise)adminPromise.then(admin=>admin?.close()).catch(()=>{});if(globalThis.groupGuardRegisterTimer){clearInterval(globalThis.groupGuardRegisterTimer);delete globalThis.groupGuardRegisterTimer}}
+let unregisterShutdown=()=>{}
+engine.close=()=>{
+  unregisterShutdown()
+  try{closeEngine()}finally{
+    if(adminPromise)adminPromise.then(admin=>admin?.close()).catch(()=>{})
+    if(globalThis.groupGuardRegisterTimer){clearInterval(globalThis.groupGuardRegisterTimer);delete globalThis.groupGuardRegisterTimer}
+  }
+}
+unregisterShutdown=attachShutdown(engine)
 export function adapterFor(bot) {
   let adapter=adapters.get(bot)
   if(!adapter){

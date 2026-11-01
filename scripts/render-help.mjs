@@ -35,10 +35,13 @@ async function browserRender(browser,request,temp){
   return fs.readFileSync(png)
 }
 
-export async function renderHelp({root=fileURLToPath(new URL('..',import.meta.url)),version='2.0.0',renderer,browser,convertToJpeg}={}){
+export async function renderHelp({root=fileURLToPath(new URL('..',import.meta.url)),version,renderer,browser,convertToJpeg}={}){
   if(renderer!==undefined&&typeof renderer!=='function')throw new TypeError('renderer 必须是 TRSS 渲染适配函数')
   if(!renderer&&(!browser||!fs.existsSync(browser)))throw new Error('请注入 TRSS Renderer.render 适配函数，或用 --browser 指定现有 Chrome/Edge 可执行文件')
-  const base=fs.realpathSync(root),temp=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-help-render-'))
+  const base=fs.realpathSync(root)
+  version??=JSON.parse(fs.readFileSync(path.join(base,'package.json'),'utf8')).version
+  if(typeof version!=='string'||!version.trim()||version.length>80)throw new Error('帮助版本号无效')
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-help-render-'))
   const template=fs.readFileSync(path.join(base,'resources/help-template.html'),'utf8')
   const manifest={version:1,hashAlgorithm:'sha256-lf-v1',cards:{},sources:['lib/help-content.mjs','resources/help-template.html'].map(file=>({file,sha256:sourceHash(fs.readFileSync(path.join(base,file)))}))}
   const outputs=[]

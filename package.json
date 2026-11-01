@@ -1,6 +1,6 @@
 {
   "name": "groupguard-plugin",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "description": "独立 TRSS＋NapCat 群管理插件：成员权限、审核、撤回、统计、新闻、点赞与浏览器配置",
   "license": "MIT",
