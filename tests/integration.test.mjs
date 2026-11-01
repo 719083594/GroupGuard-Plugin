@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import {fileURLToPath,pathToFileURL} from 'node:url'
+import {spawnSync} from 'node:child_process'
 import {normalize,OneBotAdapter} from '../lib/adapter.mjs'
 
 const source=fileURLToPath(new URL('..',import.meta.url))
@@ -57,6 +58,22 @@ async function route(plugin,event) {
 }
 const sent=calls=>calls.filter(call=>['send_group_msg','send_private_msg'].includes(call.action))
 const textOf=call=>(call?.params.message||[]).filter(segment=>segment.type==='text').map(segment=>segment.data.text).join('')
+
+test('声明检查接受Windows检出的CRLF且仍拒绝内容漂移，不改写源文件',t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-manifest-'))
+  t.after(()=>fs.rmSync(root,{recursive:true,force:true}))
+  for(const name of ['lib/config.mjs','lib/command.mjs','config/default.json','package.json','scripts/manifest.mjs']){
+    const file=path.join(root,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.copyFileSync(path.join(source,name),file)
+  }
+  const script=path.join(root,'scripts/manifest.mjs'),file=path.join(root,'plugin.manifest.json')
+  assert.equal(spawnSync(process.execPath,[script],{encoding:'utf8'}).status,0)
+  fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace(/\r?\n/g,'\r\n'))
+  const before=fs.readFileSync(file)
+  assert.equal(spawnSync(process.execPath,[script,'--check'],{encoding:'utf8'}).status,0)
+  assert.deepEqual(fs.readFileSync(file),before)
+  const changed=JSON.parse(before.toString());changed.version='unexpected-version';fs.writeFileSync(file,JSON.stringify(changed,null,2)+'\r\n')
+  assert.equal(spawnSync(process.execPath,[script,'--check'],{encoding:'utf8'}).status,1)
+})
 
 test('实际入口启动并关闭嵌入管理页面，不修改群配置或接收OneBot事件',async t=>{
   const f=await fixture(t),before=fs.readFileSync(path.join(f.root,'config/local.json'),'utf8')

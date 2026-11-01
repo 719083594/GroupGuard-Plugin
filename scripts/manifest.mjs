@@ -87,5 +87,5 @@ const manifest={
 const output=JSON.stringify(manifest,null,2)+'\n'
 const target=new URL('../plugin.manifest.json',import.meta.url)
 if(process.argv.includes('--check')){
-  if(!fs.existsSync(target)||fs.readFileSync(target,'utf8')!==output){console.error('plugin.manifest.json 与命令/配置定义不一致，请运行 npm run manifest');process.exitCode=1}
+  if(!fs.existsSync(target)||fs.readFileSync(target,'utf8').replace(/\r\n/g,'\n')!==output){console.error('plugin.manifest.json 与命令/配置定义不一致，请运行 npm run manifest');process.exitCode=1}
 }else fs.writeFileSync(target,output)

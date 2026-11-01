@@ -9,6 +9,21 @@ import {update,officialOrigin} from '../lib/update.mjs'
 
 const exec=promisify(execFile)
 function git(root,...args){return execFileSync('git',['-c','safe.directory='+root,'-C',root,...args],{encoding:'utf8',windowsHide:true,stdio:['ignore','pipe','pipe']}).trim()}
+function shortWindowsPath(directory){
+  const script=`Add-Type -TypeDefinition @'
+using System.Runtime.InteropServices;
+using System.Text;
+public static class GroupGuardUpdateShortPath {
+ [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] public static extern uint GetShortPathName(string path,StringBuilder result,uint size);
+}
+'@
+$buffer=New-Object Text.StringBuilder 32768
+$length=[GroupGuardUpdateShortPath]::GetShortPathName($env:GROUPGUARD_TEST_ALIAS_PATH,$buffer,32768)
+if($length -eq 0){throw 'GetShortPathName failed'}
+[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false)
+[Console]::Write($buffer.ToString())`
+  return execFileSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{encoding:'utf8',windowsHide:true,timeout:15000,env:{...process.env,GROUPGUARD_TEST_ALIAS_PATH:directory},stdio:['ignore','pipe','pipe']}).trim()
+}
 function fixture(t,{advance=true}={}){
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-update-')),root=path.join(temp,'plugin'),remote=path.join(temp,'official.git'),upstream=path.join(temp,'upstream')
   t.after(()=>fs.rmSync(temp,{recursive:true,force:true,maxRetries:3,retryDelay:100}))
@@ -45,6 +60,41 @@ test('官方main快进更新，保留配置/data并记录前后提交，不重�
 
 test('已经最新可准确报告',async t=>{
   const f=fixture(t,{advance:false});assert((await update(f.root,{runGit:f.runGit})).includes('已经最新'))
+})
+
+test('真实目录别名仍可安全更新，Windows覆盖8.3短名和扩展路径前缀',async t=>{
+  const f=fixture(t)
+  let alias
+  if(process.platform==='win32'){
+    alias=shortWindowsPath(f.root)
+    if(alias.toLowerCase()===f.root.toLowerCase())t.diagnostic('This volume provided no additional 8.3 spelling; extended-prefix coverage still runs.')
+  }else{
+    alias=path.join(f.temp,'plugin-alias');fs.symlinkSync(f.root,alias,'dir')
+  }
+  const real=fs.realpathSync.native(f.root)
+  assert.equal(fs.realpathSync.native(alias),real)
+  assert((await update(alias,{runGit:f.runGit})).includes('源码已拉取'))
+  assert.equal(git(f.root,'rev-parse','HEAD'),f.target)
+  if(process.platform==='win32'){
+    const extended=path.toNamespacedPath(f.root)
+    assert.equal(fs.realpathSync.native(extended),real)
+    assert((await update(extended,{runGit:f.runGit})).includes('已经最新'))
+  }
+})
+
+test('junction或符号链接别名共用更新锁，其他物理Git根仍拒绝',async t=>{
+  const f=fixture(t),alias=path.join(f.temp,'plugin-junction')
+  fs.symlinkSync(f.root,alias,process.platform==='win32'?'junction':'dir')
+  let release,entered
+  const waiting=new Promise(resolve=>{entered=resolve}),gate=new Promise(resolve=>{release=resolve})
+  const runGit=async(args,options)=>{if(args[0]==='pull'){entered();await gate}return f.runGit(args,options)}
+  const first=update(alias,{runGit});await waiting
+  try{await assert.rejects(update(f.root,{runGit}),/正在更新/)}finally{release()}
+  await first
+  const differentRoot=async(args,options)=>args.join(' ')==='rev-parse --show-toplevel'?{stdout:f.upstream,stderr:''}:f.runGit(args,options)
+  await assert.rejects(update(f.root,{runGit:differentRoot}),/Git 根目录不是本插件/)
+  const child=path.join(alias,'nested');fs.mkdirSync(child)
+  await assert.rejects(update(child,{runGit:f.runGit}),/Git 根目录不是本插件/)
 })
 
 test('脏树、错误来源、异常分支和进行中合并均在拉取前停止',async t=>{
