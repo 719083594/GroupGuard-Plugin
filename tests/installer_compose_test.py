@@ -1,6 +1,7 @@
 """Use the actual Compose parser only; never contact a Docker daemon."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -13,12 +14,16 @@ SPEC.loader.exec_module(installer)
 
 
 def available():
+    # Host automation explicitly supports Linux Docker only. Windows native
+    # installation is exercised by installer_test; Docker Desktop is manual.
+    if os.name != 'posix':
+        return False
     if not shutil.which('docker'):
         return False
     return subprocess.run(['docker','compose','version'],capture_output=True,timeout=15).returncode == 0
 
 
-@unittest.skipUnless(available(),'Docker Compose CLI not available; no daemon is needed')
+@unittest.skipUnless(available(),'Requires Linux Docker Compose CLI; Windows Docker host automation is unsupported')
 class ActualComposeTests(unittest.TestCase):
     def check(self, text, mapped=False):
         with tempfile.TemporaryDirectory(prefix='groupguard-compose-test-') as name:

@@ -28,6 +28,13 @@ class InstallError(Exception):
     pass
 
 
+def configure_console():
+    # Windows redirected stdout may otherwise use cp1252 and fail on Chinese.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(encoding='utf-8', errors='backslashreplace')
+
+
 def require(condition, message):
     if not condition:
         raise InstallError(message)
@@ -459,6 +466,7 @@ def print_usage(target, port, docker, masters, restart_required, login):
 
 
 def main(argv=None):
+    configure_console()
     require(sys.version_info >= (3, 9), '安装工具需要 Python 3.9 或更高版本；机器人日常运行不依赖 Python。')
     parser = argparse.ArgumentParser(description='群管宿主机安装向导；不安装 TRSS/NapCat，不更新已有群管源码，不修改主人。')
     parser.add_argument('--trss', help='TRSS 在宿主机的目录')

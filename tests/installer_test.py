@@ -19,7 +19,12 @@ class InstallerTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix='groupguard-installer-test-')
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
+        self.root = Path(self.temporary.name).resolve()
+        # Helper-level calls below use simulated Docker; don't emit fake progress
+        # to the test runner's locale-dependent console.
+        self.output = contextlib.redirect_stdout(io.StringIO())
+        self.output.__enter__()
+        self.addCleanup(self.output.__exit__, None, None, None)
 
     def target(self):
         target = self.root/'plugins/GroupGuard-Plugin'
@@ -257,11 +262,20 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(json.loads(record.read_text())['phase'],'needs-inspection')
 
     def test_shell_entry_is_fixed_official_repo_and_forwards_arguments(self):
-        entry = (Path(__file__).resolve().parents[1]/'scripts/install.sh').read_text()
+        entry = (Path(__file__).resolve().parents[1]/'scripts/install.sh').read_text(encoding='utf-8')
         self.assertIn(installer.REPOSITORY,entry)
         self.assertIn('"$@"',entry)
         self.assertNotIn('sudo',entry)
         self.assertNotIn('docker.sock',entry)
+
+    def test_cli_console_supports_chinese_when_original_encoding_is_cp1252(self):
+        raw = io.BytesIO()
+        stream = io.TextIOWrapper(raw,encoding='cp1252')
+        with patch.object(installer.sys,'stdout',stream):
+            installer.configure_console()
+            print('群管安装')
+            stream.flush()
+        self.assertEqual(raw.getvalue().decode('utf-8').strip(),'群管安装')
 
     def test_cli_rejects_shell_injection_before_discovery(self):
         with patch.object(installer,'discover') as discovery, self.assertRaises(installer.InstallError):
