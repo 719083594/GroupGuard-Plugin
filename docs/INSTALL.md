@@ -9,7 +9,7 @@
 | 空白服务器 | 先安装并连接 TRSS＋NapCat，登录 QQ；群管不代装框架、Redis、NapCat 或登录账号 |
 | Linux＋Docker Compose，TRSS 源码绑定到宿主机目录 | 推荐安装向导；需要宿主机 Git、Python 3.9+、Docker Compose 和现有目录及 Docker 管理权限 |
 | Linux 普通安装 | 向导可复制完整插件、创建默认配置；重启仍使用机器人原有命令，不猜测 systemd/PM2 服务 |
-| Windows 普通安装 | Git/ZIP 安装后运行 `python scripts/install.py --trss "实际TRSS目录"`，再按原方式重启；Node 20+ 和 TRSS 依赖须预先可用 |
+| Windows 普通安装 | 在插件目录运行 `python scripts/install.py --native --trss "实际TRSS目录"`，再按原方式重启；Node 20+ 和 TRSS 依赖须预先可用 |
 | Docker Desktop、命名卷/镜像内源码、docker run、host 网络、复杂 Compose YAML | 使用本页手动安装；不会尝试给容器提权或猜测重建参数 |
 | 其他机器人框架 | 目前未提供接入层，不能直接使用；独立插件不代表跨框架免适配 |
 

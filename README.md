@@ -42,7 +42,7 @@ git clone https://github.com/719083594/GroupGuard-Plugin.git plugins/GroupGuard-
 python3 plugins/GroupGuard-Plugin/scripts/install.py --trss "$PWD"
 ```
 
-这条命令不重新下载或更新已有插件。非 Docker 安装会初始化文件并提示使用原方式重启。Windows 普通安装将 `python3` 换成 `python`，`--trss` 填实际 TRSS 绝对路径；Windows Docker Desktop、镜像内没有挂载源码、`docker run`、host 网络等布局见 [适用范围与手动安装](docs/INSTALL.md)。
+这条命令不重新下载或更新已有插件。非 Docker 安装会初始化文件并提示使用原方式重启。Windows 普通安装使用 `python plugins/GroupGuard-Plugin/scripts/install.py --native --trss "实际TRSS绝对路径"`，明确跳过 Docker 探测；Windows Docker Desktop、镜像内没有挂载源码、`docker run`、host 网络等布局见 [适用范围与手动安装](docs/INSTALL.md)。
 
 ### 手动填写主人，然后启用
 
@@ -259,6 +259,8 @@ npm run check:manifest
 2.1.0 的发布顺序为：本地验证与文档核对 → GitHub 八项 CI → 从 GitHub 下载并按本 README 配置与实机核验。真实执行结果见 [验证范围](docs/VERIFICATION.md)，不能用历史版本结果代替。
 
 安装工具另需执行 `python -m unittest discover -s tests -p 'installer*_test.py' -v`；有 Docker Compose CLI 时会实际解析合成配置，不连接 Docker 服务。日常运行无需 Python。GitHub CI 分别检查 Node 20/22/24/26 × Linux/Windows，安装/重建及 QQ 送达另做实机验收。
+
+2.1.0 功能代码已通过[八项 CI](https://github.com/719083594/GroupGuard-Plugin/actions/runs/41498755156)，并在 Linux＋Docker Compose 实机上从 GitHub 下载后首次执行本文快捷命令成功；配置、数据和原管理密码保留，网页 SSH 访问正常。运行中的插件已完成受控命令测试，QQ 平台历史确认帮助图、状态图及文字回复；这不等同于真人输入或手机端耗时测试。完整范围见 [验证说明](docs/VERIFICATION.md)。
 
 `plugin.manifest.json` 是独立插件声明，包含完整命令、权限上下文、配置字段和敏感标志，由管理程序主动读取；不包含实例秘密，不依赖另外安装统计/新闻/点赞插件。修改命令或默认配置后运行声明生成与一致性检查。发布 CI 固定检查 Node 20/22/24/26 × Linux/Windows，八项均通过后再发布；实际 TRSS 运行环境另行验收。
 
