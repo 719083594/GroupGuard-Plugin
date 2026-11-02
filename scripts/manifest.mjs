@@ -62,7 +62,7 @@ const syntax={
   '同意':'#群管同意 [请求编号]（也可引用通知）','拒绝':'#群管拒绝 [请求编号]（也可引用通知）',
   '全局':'#群管全局 <字段> <值>'
 }
-const withoutEnabled=new Set(['帮助','版本','状态','开启','关闭','同意','拒绝','全局','群黑名单','群白名单','更新日志','更新','日志'])
+const withoutEnabled=new Set(['帮助','版本','登录','状态','开启','关闭','同意','拒绝','全局','群黑名单','群白名单','更新日志','更新','日志'])
 const commandTable=MAIN_COMMANDS.map(name=>{
   const metadata=COMMAND_DEFINITIONS.find(row=>row.names.includes(name))
   return {name,command:syntax[name]||'#群管'+name,aliases:['/群管'+name],permission:metadata.access,contexts:name==='待审核'?['group']:metadata.contexts,requiresEnabled:!withoutEnabled.has(name),description:metadata.description}
@@ -82,7 +82,7 @@ const manifest={
     ...Object.entries(defaults).map(([key,value])=>field(key,value,'global')),
     ...Object.entries(groupDefaults).map(([key,value])=>field(key,value,'group'))
   ]}],
-  management:{manifestOnly:false,browserStatus:'implemented',serverProvided:true,embeddedIn:'TRSS plugin process',defaultHost:'127.0.0.1',defaultPort:15083,authentication:'password-and-session-csrf',environment:{enabled:'GROUPGUARD_ADMIN_ENABLED',host:'GROUPGUARD_ADMIN_HOST',port:'GROUPGUARD_ADMIN_PORT'},description:'插件内置配置页面；无额外系统服务，不接收OneBot事件；Docker只映射宿主回环地址。'},
+  management:{manifestOnly:false,browserStatus:'implemented',serverProvided:true,embeddedIn:'TRSS plugin process',defaultHost:'127.0.0.1',defaultPort:15083,authentication:'password-or-one-time-qq-ticket; session-csrf',loginLink:{command:'#群管登录',context:'master-private',ttlSeconds:180,singleUse:true,fragmentCredential:true},environment:{enabled:'GROUPGUARD_ADMIN_ENABLED',host:'GROUPGUARD_ADMIN_HOST',port:'GROUPGUARD_ADMIN_PORT',publicUrl:'GROUPGUARD_ADMIN_PUBLIC_URL'},description:'插件内置配置页面；无额外系统服务，不接收OneBot事件；Docker只映射宿主回环地址。'},
   privacy:{instanceConfigPublished:false,instanceDataPublished:false,secretFields:['newsSources.*.key','newsSources.*.url','legacy']}
 }
 const output=JSON.stringify(manifest,null,2)+'\n'

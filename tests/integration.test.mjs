@@ -205,6 +205,17 @@ test('群申请和成员事件保留正确框架事件与 OneBot 适配，工具
   await assert.rejects(new OneBotAdapter(async()=>({status:'failed',retcode:2,message:'失败'})).api('fake'),/失败/)
 })
 
+test('网页登录只接受主人私聊，群聊和普通成员不能获取临时链接',async t=>{
+  const f=await fixture(t)
+  f.entry.engine.config.update(c=>{c.masters=[MASTER]})
+  let issued=0
+  f.entry.engine.loginLink=async meta=>{assert.equal(meta.botId,BOT);assert.equal(meta.userId,MASTER);issued++;return 'https://synthetic.example/#login='+'x'.repeat(43)}
+  await route(f.p,f.event('#群管登录',{group_id:undefined,user_id:Number(ACTOR)}));assert.equal(issued,0)
+  await route(f.p,f.event('#群管登录',{user_id:Number(MASTER)}));assert.equal(issued,0)
+  await route(f.p,f.event('#群管登录',{group_id:undefined,user_id:Number(MASTER)}));assert.equal(issued,1)
+  assert.match(textOf(sent(f.calls).at(-1)),/https:\/\/synthetic.example\/\#login=/)
+})
+
 test('独立声明覆盖全部最终指令与敏感新闻字段，不泄露默认实例数据',()=>{
   const manifest=JSON.parse(fs.readFileSync(path.join(source,'plugin.manifest.json'),'utf8'))
   assert.equal(manifest.version,packageVersion)

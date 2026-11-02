@@ -31,6 +31,7 @@ export function createForMyFramework(frameworkCall, pluginRoot) {
 | `statusImage(html)` | 可选。宿主把固定状态 HTML 渲染为 PNG/JPEG Buffer；缺失、超时、失败时回退文字 |
 | `helpImages` | 默认读取本插件固定 JPEG，不依赖 AI 或框架渲染；可设为 `null` 使用文字帮助 |
 | `statusTimeoutMs` | 可选图片等待时间，默认 8000 毫秒，上限 30000 |
+| `loginLink({botId,userId,isMaster})` | 可选。宿主为已核验的主人生成网页登录链接；TRSS 已完成接入。回调必须返回短时一次性链接，不能返回密码 |
 | `now`、`fetcher`、`updater` | 可选时钟、新闻请求和源码更新适配；默认使用现有实现 |
 
 宿主操作回调使用 **OneBot v11 形状的内部约定**，不要求宿主自己使用 OneBot 或 NapCat。其他框架的 SDK 操作名和返回值不同，就在适配层转换：
@@ -94,3 +95,10 @@ await guard.close()
 ## 验证边界
 
 `tests/framework-api.test.mjs` 在无 TRSS 的 Node 进程导入公共接口，以合成宿主验证收发、权限、防重、错误语义、帮助图、宿主状态图、网页启停及模板订阅。TRSS 入口另有原集成测试。新增接口不代表 Koishi、NoneBot、其他协议端或 Python 桥接已经完成真实适配与联调。
+
+
+## QQ 网页登录
+
+`#群管登录` 在核心中先检查主人身份与私聊上下文，再调用 `loginLink`。其他框架可在创建实例时注入回调，调用 `guard.openAdmin({publicUrl:'https://你的管理地址'})` 返回的 `createLoginLink({principal,authorize})`。`principal` 使用机器人和主人组合标识；`authorize` 在发链接、兑换和使用会话时重新核验当前主人身份，不能永久捕获一次旧的 true。TRSS 适配使用插件 masters 或对应机器人的当前 TRSS 主人名单。
+
+管理模块不会公开远程发票接口。`publicUrl` 是部署者设置的精确 HTTPS 源；Host 与 Origin 按它校验，不能从请求的转发头推断任意入口。外部 HTTPS 可由已有代理或本文安装指南中的示例提供。

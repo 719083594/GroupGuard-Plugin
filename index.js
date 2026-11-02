@@ -24,10 +24,20 @@ let adminPromise
 export function startAdmin(){
   if(process.env.GROUPGUARD_ADMIN_ENABLED==='0')return Promise.resolve(null)
   if(!adminPromise){
-    adminPromise=createAdminServer({root,store:engine.config,engine,host:process.env.GROUPGUARD_ADMIN_HOST||'127.0.0.1',port:Number(process.env.GROUPGUARD_ADMIN_PORT||15083),onError:error=>globalThis.logger?.warn('[GroupGuard 管理] '+(error?.message||error))})
+    adminPromise=createAdminServer({root,store:engine.config,engine,host:process.env.GROUPGUARD_ADMIN_HOST||'127.0.0.1',port:Number(process.env.GROUPGUARD_ADMIN_PORT||15083),publicUrl:process.env.GROUPGUARD_ADMIN_PUBLIC_URL||'',onError:error=>globalThis.logger?.warn('[GroupGuard 管理] '+(error?.message||error))})
     adminPromise.then(admin=>globalThis.logger?.info('[GroupGuard] 配置界面已启动，端口 '+admin.address.port+'；初始密码见插件 data/admin-initial-password.txt。')).catch(()=>{adminPromise=null})
   }
   return adminPromise
+}
+engine.loginLink=async({botId,userId,isMaster})=>{
+  const admin=await startAdmin()
+  if(!admin)throw new Error('网页配置已关闭，请启用 GROUPGUARD_ADMIN_ENABLED 后重启机器人')
+  return admin.createLoginLink({principal:botId+':'+userId,authorize:async()=>{
+    if(engine.config.read().masters.map(String).includes(String(userId)))return true
+    if(!isMaster)return false
+    const {default:cfg}=await import('../../lib/config/config.js')
+    return cfg.master?.[botId]?.includes(String(userId))===true
+  }})
 }
 const closeEngine=engine.close.bind(engine)
 let unregisterShutdown=()=>{}

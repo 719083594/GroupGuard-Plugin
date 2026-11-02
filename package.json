@@ -1,6 +1,6 @@
 {
   "name": "groupguard-plugin",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "type": "module",
   "main": "./api.mjs",
   "exports": {".": "./api.mjs", "./trss": "./index.js"},

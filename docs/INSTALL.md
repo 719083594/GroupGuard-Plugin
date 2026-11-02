@@ -180,3 +180,45 @@ git pull --ff-only origin main
 迁移前停好旧实例，备份完整插件目录，尤其是配置、data 中统计/待审/额度/认证，以及原 Compose/.env。敏感备份不要公开上传；同一运行数据不能同时由两个进程写。新服务器的 QQ 登录、TRSS/NapCat 和真实群权限另行准备。
 
 卸载前停止 TRSS 并备份插件的配置和 data；移走 `plugins/GroupGuard-Plugin` 整个目录，再按原方式启动机器人。若要完整关闭管理映射，只移除原 Compose 中群管专用环境变量和端口，再仅重新创建机器人；保留其他插件和服务。不要用历史 `compose.before` 覆盖期间新增的无关配置。工具未添加额外系统服务或定时任务，无需到其他位置寻找第二个插件。
+
+
+## 手机访问与 HTTPS
+
+主人私聊 `#群管登录` 后，机器人会回复一次性配置链接。手机访问需要一个公网 HTTPS 入口；这部分在首次部署时配置一次，之后正常使用登录指令即可。
+
+已有 HTTPS 反向代理时，把群管转发到宿主机 `127.0.0.1:15083`，保留原 Host 请求头，并设置机器人的启动环境变量：
+
+```text
+GROUPGUARD_ADMIN_PUBLIC_URL=https://你的域名或公网IP
+```
+
+只填写源地址，不加子路径、查询参数或密码。Docker 用户把它合并到现有 Yunzai 服务的 environment，使用本文的 Compose 命令重新创建该服务；普通安装在原启动环境中设置后重启机器人。`15083` 继续保持宿主机回环映射，公开访问交给 HTTPS 入口。
+
+### Linux Docker：使用随包的 Caddy 示例
+
+需要服务器已有 Docker Compose，公网 IP 可用，80 和 443 TCP 端口空闲并已在系统及云防火墙放行。公网 IP 证书由 Let's Encrypt 的 shortlived 服务签发，Caddy 保管和续期；访问设备无需安装自签证书。官方说明见 [IP 证书](https://letsencrypt.org/2026/01/15/6day-and-ip-general-availability)。
+
+在插件目录执行：
+
+```sh
+mkdir -p data/https
+cp examples/https/Caddyfile examples/https/compose.yaml data/https/
+```
+
+编辑 `data/https/Caddyfile`，把两处 `203.0.113.10` 换成自己的公网 IP 或域名，确认末尾转发端口与群管实际端口一致，再执行：
+
+```sh
+docker compose -f data/https/compose.yaml up -d
+```
+
+该示例使用 Linux host 网络。证书及代理配置保存在插件 `data/https/`，保留这个目录供自动续期使用。80 用于证书验证和跳转，443 提供加密网页；如果端口已有其他网站服务，直接在原代理中增加群管配置即可。
+
+随后设置前面的 `GROUPGUARD_ADMIN_PUBLIC_URL` 并重新创建 Yunzai 服务。先确认手机打开这个 HTTPS 地址能显示群管登录页，再由主人私聊发送 `#群管登录`。
+
+### 登录链接的行为
+
+- 3 分钟有效，使用一次后失效；重新获取会使该主人的旧链接失效。
+- 链接只在主人私聊回复，群聊和普通成员无法获取。原管理密码不会出现在链接里，也不会被改掉。
+- 网页会自动完成登录并清理地址栏中的临时凭据。凭据通过同源请求交换为原有管理会话，手机与电脑使用同一套页面。
+- 主人权限变化、修改密码或服务重启会使相应链接或会话失效。首次尚未设置密码时，QQ 主人可以直接设置新密码；平时也可继续密码登录。
+- 关闭网页服务仍使用 `GROUPGUARD_ADMIN_ENABLED=0`。未配置 PUBLIC_URL 时，QQ 会提示先设置访问地址，原本机/SSH 密码入口仍可使用。

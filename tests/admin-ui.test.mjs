@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
-import {AdminApi,AdminError,GROUP_SECTIONS,GLOBAL_SECTIONS,validId,parseList,fieldValue,newsPayload,createAdminApp} from '../resources/admin/app.js'
+import {AdminApi,AdminError,GROUP_SECTIONS,GLOBAL_SECTIONS,validId,parseList,fieldValue,newsPayload,createAdminApp,takeLoginTicket} from '../resources/admin/app.js'
 import {groupDefaults,GLOBAL_CHAT_FIELDS} from '../lib/config.mjs'
 
 const html=fs.readFileSync(new URL('../resources/admin/index.html',import.meta.url),'utf8')
@@ -133,6 +133,37 @@ function dom(){
   return doc
 }
 const flush=()=>new Promise(resolve=>setImmediate(resolve))
+
+test('QQ链接先清理地址栏再兑换，自动进入原配置页，不把密码或凭据写到本地存储',async()=>{
+  const doc=dom(),calls=[],ticket='x'.repeat(43),location={hash:'#login='+ticket,pathname:'/',search:''}
+  let cleared=false
+  const history={replaceState(data,title,url){assert.equal(url,'/');location.hash='';cleared=true}}
+  const api=new AdminApi(async(url,options)=>{
+    assert(cleared);calls.push({url,options})
+    if(url==='/api/login-ticket'){assert.deepEqual(JSON.parse(options.body),{ticket});return response({authenticated:true,csrf:'synthetic-csrf',mustChangePassword:false})}
+    if(url==='/api/config')return response(config())
+    throw new Error('Unexpected request')
+  })
+  await createAdminApp(doc,api,{location,history}).start()
+  assert.deepEqual(calls.map(c=>c.url),['/api/login-ticket','/api/config'])
+  assert.equal(doc.getElementById('appView').hidden,false)
+  assert.equal(doc.getElementById('loginPassword').value,'')
+  assert.equal(location.hash,'')
+})
+
+test('QQ初次登录可直接设置密码，失效链接仍显示原密码登录并提示重新获取',async()=>{
+  const doc=dom(),location={hash:'#login='+'y'.repeat(43),pathname:'/',search:''},history={replaceState(){location.hash=''}}
+  const api=new AdminApi(async()=>response({authenticated:true,csrf:'synthetic-csrf',mustChangePassword:true,canSetInitialPassword:true}))
+  await createAdminApp(doc,api,{location,history}).start()
+  assert.equal(doc.getElementById('currentPasswordField').hidden,true)
+  assert.equal(doc.getElementById('currentPassword').required,false)
+  assert.equal(doc.getElementById('passwordView').hidden,false)
+  const badDoc=dom(),badApi=new AdminApi(async()=>response({error:'链接已过期，请重新发送 #群管登录',code:'INVALID_LOGIN_LINK'},401))
+  await createAdminApp(badDoc,badApi,{location:{hash:'#login='+'z'.repeat(43),pathname:'/',search:''},history}).start()
+  assert.equal(badDoc.getElementById('loginView').hidden,false)
+  assert.match(badDoc.getElementById('notice').textContent,/#群管登录/)
+  assert.throws(()=>takeLoginTicket({hash:'#login=bad',pathname:'/',search:''},history),/格式/)
+})
 
 test('初始密码会话只显示强制改密，不读取配置；改密后回登录并清空输入',async()=>{
   const calls=[],doc=dom()

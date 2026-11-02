@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "groupguard",
   "title": "GroupGuard-Plugin 群管",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "群管：独立群管理核心、内置 TRSS 适配和通用框架接入接口，提供权限、审核、撤回、统计、新闻、点赞与网页配置",
   "runtime": {
     "framework": "TRSS",
@@ -26,6 +26,7 @@
   "commands": [
     "#群管帮助 [文字]",
     "#群管版本",
+    "#群管登录",
     "#群管状态 [文字]",
     "#群管开启",
     "#群管关闭",
@@ -87,6 +88,19 @@
       ],
       "requiresEnabled": false,
       "description": "#群管帮助 / #群管帮助 文字 / #群管版本"
+    },
+    {
+      "name": "登录",
+      "command": "#群管登录",
+      "aliases": [
+        "/群管登录"
+      ],
+      "permission": "master",
+      "contexts": [
+        "private"
+      ],
+      "requiresEnabled": false,
+      "description": "#群管登录：主人私聊获取3分钟内一次有效的网页配置链接"
     },
     {
       "name": "状态",
@@ -1022,11 +1036,19 @@
     "embeddedIn": "TRSS plugin process",
     "defaultHost": "127.0.0.1",
     "defaultPort": 15083,
-    "authentication": "password-and-session-csrf",
+    "authentication": "password-or-one-time-qq-ticket; session-csrf",
+    "loginLink": {
+      "command": "#群管登录",
+      "context": "master-private",
+      "ttlSeconds": 180,
+      "singleUse": true,
+      "fragmentCredential": true
+    },
     "environment": {
       "enabled": "GROUPGUARD_ADMIN_ENABLED",
       "host": "GROUPGUARD_ADMIN_HOST",
-      "port": "GROUPGUARD_ADMIN_PORT"
+      "port": "GROUPGUARD_ADMIN_PORT",
+      "publicUrl": "GROUPGUARD_ADMIN_PUBLIC_URL"
     },
     "description": "插件内置配置页面；无额外系统服务，不接收OneBot事件；Docker只映射宿主回环地址。"
   },

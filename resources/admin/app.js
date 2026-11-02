@@ -2,13 +2,13 @@ export class AdminError extends Error {
   constructor(message,{status=0,code='',uncertain=false}={}){super(message);this.status=status;this.code=code;this.uncertain=uncertain}
 }
 export class AdminApi {
-  constructor(fetcher=globalThis.fetch.bind(globalThis),{timeout=20000}={}){this.fetcher=fetcher;this.timeout=timeout;this.csrf='';this.authenticated=false;this.mustChangePassword=false;this.revision='';this.blocked=false;this.writing=false}
-  clear(){this.csrf='';this.authenticated=false;this.mustChangePassword=false;this.revision='';this.blocked=false}
+  constructor(fetcher=globalThis.fetch.bind(globalThis),{timeout=20000}={}){this.fetcher=fetcher;this.timeout=timeout;this.csrf='';this.authenticated=false;this.mustChangePassword=false;this.canSetInitialPassword=false;this.revision='';this.blocked=false;this.writing=false}
+  clear(){this.csrf='';this.authenticated=false;this.mustChangePassword=false;this.canSetInitialPassword=false;this.revision='';this.blocked=false}
   async request(path,{method='GET',body}={}){
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),this.timeout)
     try{
       const headers={Accept:'application/json'}
-      if(method!=='GET'){headers['Content-Type']='application/json';if(path!=='/api/login')headers['X-CSRF-Token']=this.csrf}
+      if(method!=='GET'){headers['Content-Type']='application/json';if(!['/api/login','/api/login-ticket'].includes(path))headers['X-CSRF-Token']=this.csrf}
       const response=await this.fetcher(path,{method,headers,credentials:'same-origin',cache:'no-store',signal:controller.signal,...(body===undefined?{}:{body:JSON.stringify(body)})})
       let data
       try{data=await response.json()}catch{throw new AdminError('配置服务返回了无法识别的响应，请重新加载核对。',{uncertain:method!=='GET'})}
@@ -22,8 +22,10 @@ export class AdminApi {
       throw new AdminError(method==='GET'?'无法读取配置服务，请检查连接后重试。':'请求结果尚未确认，请先重新加载核对，不要重复提交。',{uncertain:method!=='GET'})
     }finally{clearTimeout(timer)}
   }
-  async session(){const data=await this.request('/api/session');this.authenticated=data.authenticated===true;this.csrf=data.csrf||'';this.mustChangePassword=data.mustChangePassword===true;return data}
-  async login(password){const data=await this.request('/api/login',{method:'POST',body:{password}});this.authenticated=data.authenticated===true;this.csrf=data.csrf||'';this.mustChangePassword=data.mustChangePassword===true;return data}
+  setSession(data){this.authenticated=data.authenticated===true;this.csrf=data.csrf||'';this.mustChangePassword=data.mustChangePassword===true;this.canSetInitialPassword=data.canSetInitialPassword===true;return data}
+  async session(){return this.setSession(await this.request('/api/session'))}
+  async login(password){return this.setSession(await this.request('/api/login',{method:'POST',body:{password}}))}
+  async loginTicket(ticket){return this.setSession(await this.request('/api/login-ticket',{method:'POST',body:{ticket}}))}
   async logout(){try{return await this.request('/api/logout',{method:'POST',body:{}})}finally{this.clear()}}
   async password(currentPassword,newPassword){const data=await this.request('/api/password',{method:'POST',body:{currentPassword,newPassword}});this.clear();return data}
   async config(){const data=await this.request('/api/config');this.revision=data.revision;this.blocked=false;return data}
@@ -90,7 +92,15 @@ export function newsPayload({botId,groupId,url,authType='none',authName='',keyAc
   return {botId,groupId,patch}
 }
 
-export function createAdminApp(doc=globalThis.document,api=new AdminApi()){
+export function takeLoginTicket(location=globalThis.location,history=globalThis.history){
+  if(!location||!location.hash?.startsWith('#login='))return ''
+  const value=location.hash.slice(7)
+  history?.replaceState(null,'',location.pathname+location.search)
+  if(!/^[A-Za-z0-9_-]{43}$/.test(value))throw new AdminError('登录链接格式无效，请在 QQ 私聊重新发送 #群管登录。')
+  return value
+}
+
+export function createAdminApp(doc=globalThis.document,api=new AdminApi(),{location=globalThis.location,history=globalThis.history}={}){
   const byId=id=>doc.getElementById(id)
   const state={config:null,groupKey:'',newsBinding:'',view:'groups',busy:false,pendingRemove:null}
   const pair=(bot,group)=>String(bot)+':'+String(group)
@@ -128,6 +138,9 @@ export function createAdminApp(doc=globalThis.document,api=new AdminApi()){
     byId('pageTitle').textContent=({groups:'本群设置',news:'新闻来源',global:'全局设置',password:'账号安全'})[view]
     byId('passwordTitle').textContent=api.mustChangePassword?'首次登录：请先修改初始密码':'修改管理密码'
     byId('passwordHint').textContent=api.mustChangePassword?'初始密码不能用于配置管理。请设置至少 12 个字符的新密码，再重新登录。':'修改后所有管理会话退出，请使用新密码重新登录。'
+    byId('currentPassword').required=!api.canSetInitialPassword
+    byId('currentPasswordField').hidden=api.canSetInitialPassword
+    if(api.canSetInitialPassword)byId('passwordHint').textContent='QQ 主人身份已验证，请设置至少 12 个字符的管理密码，方便以后直接登录。'
     byId('masterNotice').hidden=api.mustChangePassword
     updateControls()
   }
@@ -211,7 +224,7 @@ export function createAdminApp(doc=globalThis.document,api=new AdminApi()){
     if(state.busy)return
     state.busy=true;updateControls()
     try{return await fn()}catch(error){
-      if(error.status===401){showLogin();notify('登录已失效，请重新登录。','error')}
+      if(error.status===401){showLogin();notify(error.code==='INVALID_LOGIN_LINK'?error.message:'登录已失效，请重新登录。','error')}
       else{
         if(error.code==='PASSWORD_CHANGE_REQUIRED'){api.mustChangePassword=true;showView('password')}
         if(api.blocked)byId('conflictMessage').textContent=error.uncertain?'上次保存结果尚未确认。请重新加载并核对当前值，再继续编辑。':'配置已被其他操作修改。请重新加载当前值后再保存，本页面不会自动覆盖。'
@@ -249,6 +262,12 @@ export function createAdminApp(doc=globalThis.document,api=new AdminApi()){
   byId('cancelRemove').addEventListener('click',()=>byId('removeDialog').close())
   byId('confirmRemove').addEventListener('click',()=>busy(async()=>{const item=state.pendingRemove;if(!item)return;await save('/api/config/'+item.kind+'/remove',{botId:item.botId,groupId:item.groupId},'配置已移除。');state.pendingRemove=null;byId('removeDialog').close()}))
   byId('passwordForm').addEventListener('submit',event=>{event.preventDefault();busy(async()=>{try{const current=byId('currentPassword').value,next=byId('newPassword').value;if(next.length<12)throw new AdminError('新密码至少需要 12 个字符。');if(next!==byId('confirmPassword').value)throw new AdminError('两次新密码不一致，请重新输入。');await api.password(current,next);showLogin();notify('密码已修改，所有旧会话已退出。请使用新密码登录。','success')}finally{for(const id of ['currentPassword','newPassword','confirmPassword'])byId(id).value=''}})})
-  return {api,start:()=>busy(async()=>{await api.session();if(!api.authenticated){showLogin();return}byId('loginView').hidden=true;byId('appView').hidden=false;if(api.mustChangePassword)showView('password');else await load()})}
+  return {api,start:()=>busy(async()=>{
+    const ticket=takeLoginTicket(location,history)
+    if(ticket){try{await api.loginTicket(ticket)}catch(error){api.clear();showLogin();throw error}}
+    else await api.session()
+    if(!api.authenticated){showLogin();return}
+    byId('loginView').hidden=true;byId('appView').hidden=false;if(api.mustChangePassword)showView('password');else await load()
+  })}
 }
 if(typeof document!=='undefined')createAdminApp().start()

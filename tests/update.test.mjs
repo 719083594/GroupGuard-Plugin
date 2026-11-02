@@ -9,6 +9,7 @@ import {update,officialOrigin} from '../lib/update.mjs'
 
 const exec=promisify(execFile)
 function git(root,...args){return execFileSync('git',['-c','safe.directory='+root,'-C',root,...args],{encoding:'utf8',windowsHide:true,stdio:['ignore','pipe','pipe']}).trim()}
+// A cold Add-Type compilation on shared Windows runners can exceed 15s.
 function shortWindowsPath(directory){
   const script=`Add-Type -TypeDefinition @'
 using System.Runtime.InteropServices;
@@ -22,7 +23,7 @@ $length=[GroupGuardUpdateShortPath]::GetShortPathName($env:GROUPGUARD_TEST_ALIAS
 if($length -eq 0){throw 'GetShortPathName failed'}
 [Console]::OutputEncoding=New-Object Text.UTF8Encoding($false)
 [Console]::Write($buffer.ToString())`
-  return execFileSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{encoding:'utf8',windowsHide:true,timeout:15000,env:{...process.env,GROUPGUARD_TEST_ALIAS_PATH:directory},stdio:['ignore','pipe','pipe']}).trim()
+  return execFileSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{encoding:'utf8',windowsHide:true,timeout:45000,env:{...process.env,GROUPGUARD_TEST_ALIAS_PATH:directory},stdio:['ignore','pipe','pipe']}).trim()
 }
 function fixture(t,{advance=true}={}){
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-update-')),root=path.join(temp,'plugin'),remote=path.join(temp,'official.git'),upstream=path.join(temp,'upstream')

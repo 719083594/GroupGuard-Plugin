@@ -18,14 +18,14 @@ const packageRoot=fileURLToPath(new URL('.',import.meta.url))
  */
 export function createGroupGuard({root=packageRoot,framework='自定义框架',call,
   now=()=>Date.now(),fetcher=fetch,onError=console.error,helpImages,
-  statusImage=null,statusTimeoutMs=8000,updater=null}={}){
+  statusImage=null,statusTimeoutMs=8000,updater=null,loginLink=null}={}){
   if(typeof call!=='function')throw new TypeError('需要宿主框架提供 call(botId, action, params)')
   if(typeof root!=='string'||!root)throw new TypeError('插件根目录无效')
   if(typeof framework!=='string'||!framework.trim()||framework.length>80||/[\r\n\0]/.test(framework))throw new TypeError('框架名称无效')
   if(typeof onError!=='function')throw new TypeError('onError 必须是函数')
   const report=message=>{try{onError(message)}catch{}}
   const engine=new GroupGuard(root,{now,fetcher,onError:report,helpImages:helpImages===undefined?createHelpImages({root}):helpImages,
-    statusImage,statusTimeoutMs,updater,runtime:framework})
+    statusImage,statusTimeoutMs,updater,loginLink,runtime:framework})
   const adapters=new Map()
   const pending=new Set()
   let adminPromise,closing
@@ -46,10 +46,10 @@ export function createGroupGuard({root=packageRoot,framework='自定义框架',c
     pending.add(work);work.then(()=>pending.delete(work),()=>pending.delete(work))
     return work
   }
-  function openAdmin({host='127.0.0.1',port=15083}={}){
+  function openAdmin({host='127.0.0.1',port=15083,publicUrl=''}={}){
     assertOpen()
     if(!adminPromise){
-      adminPromise=createAdminServer({root,store:engine.config,engine,host,port,onError:report})
+      adminPromise=createAdminServer({root,store:engine.config,engine,host,port,publicUrl,onError:report})
       adminPromise.catch(()=>{if(!engine.closed)adminPromise=undefined})
     }
     return adminPromise

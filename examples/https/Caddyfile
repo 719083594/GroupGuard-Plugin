@@ -1,0 +1,15 @@
+{
+    admin off
+    default_sni 203.0.113.10
+}
+
+# Replace both example IPs with your public IP or domain before starting.
+https://203.0.113.10 {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    reverse_proxy 127.0.0.1:15083
+}
