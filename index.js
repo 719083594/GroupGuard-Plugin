@@ -6,6 +6,7 @@ import {commandRules} from './lib/command.mjs'
 import {createAdminServer} from './lib/admin.mjs'
 import {createStatusImageRenderer} from './lib/status-image.mjs'
 import {attachShutdown} from './lib/lifecycle.mjs'
+import {environmentHints} from './lib/environment.mjs'
 
 const PluginBase=globalThis.plugin||(await import('../../lib/plugins/plugin.js')).default
 const root=fileURLToPath(new URL('.',import.meta.url))
@@ -87,6 +88,8 @@ export class GroupGuardCommands extends PluginBase {
   }
   init(){
     registerOnline();engine.start()
+    const environment=environmentHints()
+    if(environment.adminEnabled&&environment.needsHostSetup)globalThis.logger?.warn('[GroupGuard] 检测到容器环境，管理页当前只在容器内监听。请在宿主机运行本插件 scripts/install.py 配置网页入口，详见 README；QQ 群管不受影响。')
     startAdmin().catch(error=>globalThis.logger?.warn('[GroupGuard] 配置界面启动失败：'+(error?.message||error)))
     if(globalThis.groupGuardRegisterTimer)clearInterval(globalThis.groupGuardRegisterTimer)
     globalThis.groupGuardRegisterTimer=setInterval(registerOnline,15000)

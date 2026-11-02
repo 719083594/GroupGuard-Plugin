@@ -1,16 +1,50 @@
 # GroupGuard-Plugin · 群管
 
-GroupGuard 2.0.1 是由 **TRSS 加载、通过 NapCat OneBot v11 接口执行操作**的独立插件。成员管理、入群审核、通知、统计、新闻和点赞都在同一插件内，内部模块不需要另装插件。核心要求 Node.js 20+，无额外 npm 或数据库依赖；实际 TRSS 环境还须满足其自身运行要求。
+GroupGuard 2.1.0 是由 **TRSS 加载、通过 NapCat OneBot v11 接口执行操作**的独立插件。成员管理、入群审核、通知、统计、新闻和点赞都在同一插件内，内部模块不需要另装插件。核心要求 Node.js 20+，无额外 npm 或数据库依赖；实际 TRSS 环境还须满足其自身运行要求。
 
 ## 安装与首次配置
 
-在 TRSS 根目录执行：
+**只安装这一个插件，不需要拆分安装网页或工具。** 前提是 TRSS＋NapCat 已搭好、QQ 已登录；空白服务器需要先准备机器人环境。插件只正式支持这套接入，内部核心可另写适配层，不能直接装进其他框架。
+
+### 推荐：宿主机安装向导
+
+安装向导与 QQ 群管、网页后台都在本仓库中。以下命令下载官方 main，自动识别现有机器人并安装完整插件；不会另外安装一个网页插件。已有群管不会自动覆盖源码，升级先按“更新与数据保护”中的方法更新。
+
+在 **Linux 服务器宿主机**终端执行，不能在机器人容器内部执行。宿主机需已有 Git、Python 3.9+ 和 curl；Docker 用户还需 Docker Compose，以及当前账号的 Docker 与源码目录读写权限。工具不安装这些前置软件，也不要求宿主机额外安装 Node：
+
+```sh
+bash <(curl -fsSL https://raw.githubusercontent.com/719083594/GroupGuard-Plugin/main/scripts/install.sh)
+```
+
+工具会寻找 TRSS、安装完整插件、创建默认配置，为受支持的 Docker Compose 安装配置网页入口，并短暂重启机器人使插件生效。只映射宿主机 `127.0.0.1`；不开放公网管理端口，不改防火墙、不把 Docker 管理接口交给机器人。现有安装不自动更新源码或覆盖配置；已有密码继续使用。普通安装按原启动方式手动重启。安装后还需按下文手动填写主人，再由群主或机器人主人在 QQ 群发送 `#群管开启`。
+
+找不到 TRSS 或有多个机器人时，可明确指定，例如：
+
+```sh
+bash <(curl -fsSL https://raw.githubusercontent.com/719083594/GroupGuard-Plugin/main/scripts/install.sh) --trss /opt/TRSS-Yunzai
+```
+
+详细参数、只读检查、网页连接与恢复方法见 [安装与维护指南](docs/INSTALL.md)。使用自定义路径时替换为自己的目录，不要照抄示例路径。
+
+### Git 或 ZIP 手动安装
+
+在实际 TRSS 根目录执行（Docker 用户应选择映射到容器内 TRSS 的宿主机目录）：
 
 ```sh
 git clone https://github.com/719083594/GroupGuard-Plugin.git plugins/GroupGuard-Plugin
 ```
 
-也可将 ZIP 发布包解压到 `plugins/GroupGuard-Plugin`，使该目录直接包含 `index.js`、`lib/`、`package.json`。按平时方式重启机器人，加载时会创建 `config/local.json`。接入账号必须提供 `bot.sendApi(action, params)`；只支持 TRSS＋NapCat。独立接收 OneBot 事件的旧 HTTP 运行模式已移除，浏览器配置使用插件内置的本机管理服务。
+也可将 ZIP 发布包解压到 `plugins/GroupGuard-Plugin`，使该目录直接包含 `index.js`、`lib/`、`package.json`。已有目标目录时不要覆盖，更新按本文更新章节处理。接入账号必须提供 `bot.sendApi(action, params)`；独立接收 OneBot 事件的旧 HTTP 运行模式已移除，浏览器配置使用插件内置的本机管理服务。
+
+若只需要 QQ 群管，按平时方式重启机器人即可，加载时会创建 `config/local.json`，不要求先打开网页。若还需要自动配置 Docker 网页入口，可在宿主机运行刚下载的工具：
+
+```sh
+python3 plugins/GroupGuard-Plugin/scripts/install.py --trss "$PWD"
+```
+
+这条命令不重新下载或更新已有插件。非 Docker 安装会初始化文件并提示使用原方式重启。Windows 普通安装将 `python3` 换成 `python`，`--trss` 填实际 TRSS 绝对路径；Windows Docker Desktop、镜像内没有挂载源码、`docker run`、host 网络等布局见 [适用范围与手动安装](docs/INSTALL.md)。
+
+### 手动填写主人，然后启用
 
 **请先手动填写插件主人。** 编辑插件的 `config/local.json`，只修改已有的 `masters` 字段，保留其他设置。例如以下格式支持多个负责人 QQ，数字仅为示例，使用时换成实际账号：
 
@@ -75,6 +109,8 @@ docker compose up -d --no-deps --no-build --pull never yunzai
 Compose 会使用已有镜像重新创建 Yunzai 容器，让新增端口和环境变量生效。框架源码、配置和数据仍保存在原来的宿主机挂载目录；这里不重编译框架，也不重建 NapCat、Redis 等其他服务。期间 Yunzai 会短暂停止回复。
 
 只更新插件文件、没有修改 Docker 端口或环境变量时，按原来的方式重启 Yunzai 即可。**非 Docker 安装直接重启机器人**，无需执行上述 Compose 命令。
+
+已使用安装向导完成网页配置时，不必再手动编辑一次 Compose。安装日志给出实际端口；15083 已被其他程序占用时，向导可选择其他本机端口。SSH 隧道的目标端口应采用日志显示的值。工具可通过 `--ssh-target 用户名@服务器地址` 生成连接命令和可下载到 Windows 电脑的双击入口；它不保存服务器密码，也不能代替首次 SSH 登录。
 
 ## 升级到 2.0.0：不兼容变更
 
@@ -202,6 +238,8 @@ Compose 会使用已有镜像重新创建 Yunzai 容器，让新增端口和环�
 
 ## 更新与数据保护
 
+在插件目录可执行 `git pull --ff-only origin main`，也可使用下面的主人指令。若是首次从 2.0.x 升级后希望应用新版 Docker 网页安装配置，更新完成后在宿主机执行一次 `python3 scripts/install.py --trss /实际TRSS目录`；工具会使所选机器人重新加载，保留配置、data 和管理密码。原端口及环境已经配置好、普通更新未涉及部署设置时，按原方式重启机器人即可，不必反复运行向导。
+
 主人私聊 `#群管更新` 仅支持官方 `origin` 为 `https://github.com/719083594/GroupGuard-Plugin.git`、当前 `main` 的 Git 克隆安装。只对官方 `origin main` 执行快进拉取；脏源码、分叉、错误来源、异常分支或 merge/rebase/冲突时停止。不 reset、clean、stash，不覆盖实例配置或数据，不自动重启。超时先核对实际提交状态；完成后提示重启生效。
 
 ZIP 安装请手动替换新发布包，保留 `config/local.json`、`data/` 及其他实例配置；不会伪称 Git 更新成功，也不提供自动解压覆盖。配置和运行数据必须保持未被 Git 跟踪；静态帮助资源随版本正常更新。
@@ -218,9 +256,9 @@ npm run check:manifest
 
 `npm test` 通过 `scripts/test.mjs` 显式枚举 `tests/*.test.mjs`，不递归扫描临时副本或备份，并兼容 Windows 与 Node 20。测试采用合成账号、模拟 OneBot/时钟、隔离 Git 仓库和临时本机管理服务，不向真实群执行平台操作。`tests/integration.test.mjs` 实际导入 TRSS 入口，以 PluginBase 路由模拟验证接入；`tests/admin.test.mjs` 检查管理 HTTP/API，`tests/admin-ui.test.mjs` 检查表单、强制改密、Key 操作、版本冲突与配置对象隔离。它们不能代替真实 TRSS/NapCat、浏览器页面、新闻鉴权和 QQ 收图的对应联调；实际执行结果见 [验证范围](docs/VERIFICATION.md)。
 
-2.0.1 的发布顺序为：本地验证与文档核对 → GitHub 八项 CI → 东京部署与对应实机核验。2.0.0 已有的发布和实机记录属于历史基线，不代表本次状态图片已在新版本通过验收。
+2.1.0 的发布顺序为：本地验证与文档核对 → GitHub 八项 CI → 从 GitHub 下载并按本 README 配置与实机核验。真实执行结果见 [验证范围](docs/VERIFICATION.md)，不能用历史版本结果代替。
 
-2.0.1 本地 Windows／Node 24 完整测试：188 项通过、0 失败，1 项 POSIX 信号测试仅在 Windows 跳过，须由 Linux CI 实际运行。声明一致性与差异检查通过；合成状态生成的 PNG 已目视核对布局、文字和完整页尾。这些结果不代替八项 CI 或真实 QQ 收图。
+安装工具另需执行 `python -m unittest discover -s tests -p 'installer*_test.py' -v`；有 Docker Compose CLI 时会实际解析合成配置，不连接 Docker 服务。日常运行无需 Python。GitHub CI 分别检查 Node 20/22/24/26 × Linux/Windows，安装/重建及 QQ 送达另做实机验收。
 
 `plugin.manifest.json` 是独立插件声明，包含完整命令、权限上下文、配置字段和敏感标志，由管理程序主动读取；不包含实例秘密，不依赖另外安装统计/新闻/点赞插件。修改命令或默认配置后运行声明生成与一致性检查。发布 CI 固定检查 Node 20/22/24/26 × Linux/Windows，八项均通过后再发布；实际 TRSS 运行环境另行验收。
 

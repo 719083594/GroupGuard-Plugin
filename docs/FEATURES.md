@@ -1,10 +1,10 @@
-# GroupGuard 2.0.1 功能与实现边界
+# GroupGuard 2.1.0 功能与实现边界
 
 GroupGuard 是一个由 TRSS 加载、经 NapCat OneBot v11 操作 QQ 的独立插件。A—H 能力都在本插件中；统计、新闻和点赞是内部辅助功能，不需要另装插件。插件内置本机浏览器配置服务，页面关闭不影响群管运行。具体安装、指令和配置见 [README](../README.md)。
 
 下表用于定位功能和检查入口，测试文件存在不等于本轮已经执行或全部通过。实际执行结果按 [验证范围](VERIFICATION.md) 区分本地模拟和真实平台。
 
-| 模块 | 2.0.1 行为 | 主要本地检查 |
+| 模块 | 2.1.0 行为 | 主要本地检查 |
 |---|---|---|
 | A：权限与成员操作 | 禁言/解禁、踢人、全体禁言/解禁、管理员任免、头衔；分别核查操作人、机器人、目标 | `core.test.mjs`、`behavior.test.mjs`、`integration.test.mjs` |
 | A：消息撤回 | 正式引用撤回、有效群引用后的裸“撤回”、有限历史批量撤回；同群校验与逐条结果 | `command.test.mjs`、`behavior.test.mjs`、`core.test.mjs` |

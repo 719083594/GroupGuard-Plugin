@@ -1,6 +1,6 @@
 {
   "name": "groupguard-plugin",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "type": "module",
   "description": "独立 TRSS＋NapCat 群管理插件：成员权限、审核、撤回、统计、新闻、点赞与浏览器配置",
   "license": "MIT",
@@ -12,9 +12,9 @@
     "build:help": "node scripts/render-help.mjs"
   },
   "files": [
-    "index.js", "lib/", "config/default.json", "resources/", "tests/",
-    "scripts/test.mjs", "scripts/manifest.mjs", "scripts/render-help.mjs", "plugin.manifest.json",
-    "README.md", "CHANGELOG.md", "docs/FEATURES.md", "docs/VERIFICATION.md", "LICENSE", "NOTICE.md"
+    "index.js", "lib/", "config/default.json", "resources/", "tests/*.test.mjs", "tests/*_test.py",
+    "scripts/test.mjs", "scripts/manifest.mjs", "scripts/render-help.mjs", "scripts/install.py", "scripts/install.sh", "plugin.manifest.json",
+    "README.md", "CHANGELOG.md", "docs/FEATURES.md", "docs/VERIFICATION.md", "docs/INSTALL.md", "LICENSE", "NOTICE.md"
   ],
   "repository": "https://github.com/719083594/GroupGuard-Plugin"
 }
