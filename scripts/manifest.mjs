@@ -75,7 +75,7 @@ commandTable.push(
 )
 const manifest={
   schemaVersion:2,id:'groupguard',title:'GroupGuard-Plugin 群管',version:pkg.version,
-  description:pkg.description,runtime:{framework:'TRSS',adapter:'OneBot v11',provider:'NapCat',entry:'index.js',node:pkg.engines.node,independentHttp:false},
+  description:pkg.description,runtime:{framework:'TRSS',adapter:'OneBot v11',provider:'NapCat',entry:'index.js',node:pkg.engines.node,independentHttp:false,integrationApi:'api.mjs',integrationContract:'docs/ADAPTERS.md',integrationExample:'examples/framework-adapter.mjs',frameworksBundled:['TRSS'],frameworkApiAutoStart:false},
   permissions:{master:'TRSS isMaster === true 或手动配置的 masters；自动退群主人豁免只读取 masters',enforcement:'core-and-entry'},
   commands:commandTable.map(row=>row.command),commandTable,
   configs:[{id:'groupguard',file:'config/local.json',reload:'hot',defaults,fields:[

@@ -14,7 +14,7 @@ async function fixture(t,{enabled=true}={}) {
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'groupguard-trss-'))
   fs.mkdirSync(path.join(root,'config'))
   for(const name of ['lib','resources'])fs.cpSync(path.join(source,name),path.join(root,name),{recursive:true})
-  for(const name of ['index.js','package.json','CHANGELOG.md'])fs.copyFileSync(path.join(source,name),path.join(root,name))
+  for(const name of ['index.js','api.mjs','package.json','CHANGELOG.md'])fs.copyFileSync(path.join(source,name),path.join(root,name))
   fs.copyFileSync(path.join(source,'config/default.json'),path.join(root,'config/default.json'))
   const previousPlugin=globalThis.plugin
   globalThis.plugin=class PluginBase {constructor(options){Object.assign(this,options)}}
@@ -209,6 +209,9 @@ test('独立声明覆盖全部最终指令与敏感新闻字段，不泄露默�
   const manifest=JSON.parse(fs.readFileSync(path.join(source,'plugin.manifest.json'),'utf8'))
   assert.equal(manifest.version,packageVersion)
   assert.equal(manifest.runtime.independentHttp,false)
+  assert.equal(manifest.runtime.integrationApi,'api.mjs')
+  assert.deepEqual(manifest.runtime.frameworksBundled,['TRSS'])
+  assert.equal(manifest.runtime.frameworkApiAutoStart,false)
   assert.equal(manifest.management.browserStatus,'implemented')
   assert.equal(manifest.management.serverProvided,true)
   assert.equal(manifest.management.defaultHost,'127.0.0.1')

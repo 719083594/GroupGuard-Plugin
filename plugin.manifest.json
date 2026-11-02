@@ -2,15 +2,22 @@
   "schemaVersion": 2,
   "id": "groupguard",
   "title": "GroupGuard-Plugin 群管",
-  "version": "2.1.0",
-  "description": "独立 TRSS＋NapCat 群管理插件：成员权限、审核、撤回、统计、新闻、点赞与浏览器配置",
+  "version": "2.2.0",
+  "description": "群管：独立群管理核心、内置 TRSS 适配和通用框架接入接口，提供权限、审核、撤回、统计、新闻、点赞与网页配置",
   "runtime": {
     "framework": "TRSS",
     "adapter": "OneBot v11",
     "provider": "NapCat",
     "entry": "index.js",
     "node": ">=20",
-    "independentHttp": false
+    "independentHttp": false,
+    "integrationApi": "api.mjs",
+    "integrationContract": "docs/ADAPTERS.md",
+    "integrationExample": "examples/framework-adapter.mjs",
+    "frameworksBundled": [
+      "TRSS"
+    ],
+    "frameworkApiAutoStart": false
   },
   "permissions": {
     "master": "TRSS isMaster === true 或手动配置的 masters；自动退群主人豁免只读取 masters",

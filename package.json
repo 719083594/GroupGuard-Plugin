@@ -1,8 +1,10 @@
 {
   "name": "groupguard-plugin",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "type": "module",
-  "description": "独立 TRSS＋NapCat 群管理插件：成员权限、审核、撤回、统计、新闻、点赞与浏览器配置",
+  "main": "./api.mjs",
+  "exports": {".": "./api.mjs", "./trss": "./index.js"},
+  "description": "群管：独立群管理核心、内置 TRSS 适配和通用框架接入接口，提供权限、审核、撤回、统计、新闻、点赞与网页配置",
   "license": "MIT",
   "engines": {"node": ">=20"},
   "scripts": {
@@ -12,9 +14,9 @@
     "build:help": "node scripts/render-help.mjs"
   },
   "files": [
-    "index.js", "lib/", "config/default.json", "resources/", "tests/*.test.mjs", "tests/*_test.py",
+    "index.js", "api.mjs", "lib/", "examples/", "config/default.json", "resources/", "tests/*.test.mjs", "tests/*_test.py",
     "scripts/test.mjs", "scripts/manifest.mjs", "scripts/render-help.mjs", "scripts/install.py", "scripts/install.sh", "plugin.manifest.json",
-    "README.md", "CHANGELOG.md", "docs/FEATURES.md", "docs/VERIFICATION.md", "docs/INSTALL.md", "LICENSE", "NOTICE.md"
+    "README.md", "CHANGELOG.md", "docs/FEATURES.md", "docs/VERIFICATION.md", "docs/INSTALL.md", "docs/ADAPTERS.md", "LICENSE", "NOTICE.md"
   ],
   "repository": "https://github.com/719083594/GroupGuard-Plugin"
 }

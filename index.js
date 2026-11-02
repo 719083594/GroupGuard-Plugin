@@ -1,6 +1,5 @@
 import {fileURLToPath} from 'node:url'
-import {GroupGuard} from './lib/core.mjs'
-import {OneBotAdapter} from './lib/adapter.mjs'
+import {GroupGuard,OneBotAdapter} from './api.mjs'
 import {createHelpImages} from './lib/help-images.mjs'
 import {commandRules} from './lib/command.mjs'
 import {createAdminServer} from './lib/admin.mjs'

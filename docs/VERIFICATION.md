@@ -1,4 +1,12 @@
-# GroupGuard 2.1.0 验证记录
+# GroupGuard 验证说明
+
+## 2.2.0：通用框架接口
+
+本次增加 `api.mjs` 和适配模板。测试覆盖无 TRSS 进程导入、合成框架的事件收发、主人与群权限、操作防重、宿主异常、帮助图、图片回调与文字降级、网页显式启停及模板订阅。原 TRSS 路由、状态图片和安装工具测试继续执行。当前接口未附带其他具体框架适配，合成测试不代表那些框架已经完成实机联调。
+
+每次提交在 Node 20、22、24、26 的 Linux/Windows 八项任务中运行完整测试，实际结论见 [GitHub Actions](https://github.com/719083594/GroupGuard-Plugin/actions/workflows/test.yml)。东京继续使用 TRSS 适配，部署与运行结果单独记录；下面保留此前版本的验证证据。
+
+## 2.1.0 历史验证记录
 
 验证日期：2026-11-03，Asia/Shanghai。功能代码提交为 [fbf512b](https://github.com/719083594/GroupGuard-Plugin/commit/fbf512b31328c97f6301cd3e552ceeff6ed1bf61)，八项 [GitHub CI](https://github.com/719083594/GroupGuard-Plugin/actions/runs/41498755156) 均实际成功。最后仅文档改动的发布提交仍由相同八项 CI 再次检查，发布包以对应 Release 和 SHA256SUMS 为准。
 

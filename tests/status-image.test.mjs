@@ -113,7 +113,7 @@ test('TRSS entry loads without a renderer installation and actual status command
   const pluginRoot=path.join(temporary,'plugins','GroupGuard-Plugin')
   fs.mkdirSync(path.join(pluginRoot,'config'),{recursive:true})
   for(const name of ['lib','resources'])fs.cpSync(path.join(source,name),path.join(pluginRoot,name),{recursive:true})
-  for(const name of ['index.js','package.json','CHANGELOG.md'])fs.copyFileSync(path.join(source,name),path.join(pluginRoot,name))
+  for(const name of ['index.js','api.mjs','package.json','CHANGELOG.md'])fs.copyFileSync(path.join(source,name),path.join(pluginRoot,name))
   fs.copyFileSync(path.join(source,'config/default.json'),path.join(pluginRoot,'config/default.json'))
   const previous=globalThis.plugin
   const signalCounts=new Map(['exit','SIGINT','SIGTERM'].map(event=>[event,process.listenerCount(event)]))
